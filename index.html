@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Nürburgring Drive — Driving Simulator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="description" content="A first-person Nürburgring driving simulator on real OSM track data — custom 240Hz physics, Three.js rendering, weather and night modes. Web and Android.">
+<meta name="theme-color" content="#04111a">
+<link rel="icon" href="./favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./favicon.svg">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Nürburgring Drive — Driving Simulator">
+<meta property="og:description" content="First-person Nürburgring sim on real track data. Custom 240Hz physics, Three.js, weather & night. Web + Android.">
+<meta property="og:url" content="https://drive-game.pages.dev/">
+<meta property="og:image" content="https://drive-game.pages.dev/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Nürburgring Drive">
+<meta name="twitter:description" content="First-person Nürburgring driving simulator — custom 240Hz physics, Three.js.">
+<meta name="twitter:image" content="https://drive-game.pages.dev/og.png">
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #000;
+               font-family: 'Helvetica Neue', Arial, sans-serif; }
+  #app { position: fixed; inset: 0; }
+  .hud { position: fixed; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+         user-select: none; pointer-events: none; }
+
+  #timing { top: 14px; left: 16px; font-variant-numeric: tabular-nums; }
+  #lap-cur { font-size: 30px; font-weight: 700; letter-spacing: 1px; }
+  #lap-last, #lap-best, #lap-sector { font-size: 14px; opacity: 0.85; margin-top: 2px;
+    font-family: 'SF Mono', Menlo, monospace; }
+  #lap-delta { font-size: 20px; font-weight: 700; min-height: 24px;
+    font-family: 'SF Mono', Menlo, monospace; }
+
+  #section { top: 14px; right: 16px; text-align: right; }
+  #section-name { font-size: 26px; font-weight: 700; transition: opacity 0.8s; }
+  #section-dist { font-size: 13px; opacity: 0.7; margin-top: 2px;
+    font-family: 'SF Mono', Menlo, monospace; }
+
+  #minimap-wrap { bottom: 14px; left: 16px; }
+  #minimap { background: rgba(10,14,20,0.55); border-radius: 8px; }
+
+  #bottom-right { bottom: 14px; right: 16px; text-align: right; }
+  #telemetry { background: rgba(10,14,20,0.55); border-radius: 8px; margin-bottom: 6px; }
+  #speedbar { font-size: 20px; font-weight: 600; font-family: 'SF Mono', Menlo, monospace; }
+  #assists { font-size: 12px; opacity: 0.75; margin-top: 4px; letter-spacing: 1px; }
+
+  #center-msg { top: 22%; left: 0; right: 0; text-align: center; font-size: 30px;
+    font-weight: 700; opacity: 0; transition: opacity 0.4s; }
+
+  #help { top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: rgba(8,12,18,0.85); border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 12px; padding: 22px 30px; font-size: 14px; line-height: 1.85; }
+  #help h1 { font-size: 18px; margin: 0 0 10px; color: #ffd24a; }
+  #help td { padding-right: 18px; }
+  #help .k { color: #7ec8ff; font-family: 'SF Mono', Menlo, monospace; font-weight: 600; }
+
+  #reset-btn { position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%);
+    pointer-events: auto; cursor: pointer; background: rgba(12,18,26,0.7);
+    color: #fff; border: 1px solid rgba(255,255,255,0.3); border-radius: 8px;
+    padding: 8px 18px; font-size: 14px; font-weight: 600; letter-spacing: 1px;
+    font-family: inherit; }
+  #reset-btn:hover { background: rgba(40,60,85,0.85); border-color: #7ec8ff; }
+
+  /* ---------- touch controls ---------- */
+  #touch-ui .tbtn { position: fixed; display: flex; align-items: center; justify-content: center;
+    background: rgba(18,26,38,0.42); border: 1.5px solid rgba(255,255,255,0.30);
+    border-radius: 50%; color: #fff; font-weight: 700; z-index: 20;
+    user-select: none; -webkit-user-select: none; touch-action: none; pointer-events: auto; }
+  #touch-ui .tbtn:active { background: rgba(80,120,170,0.5); }
+  #t-left  { left: calc(18px + env(safe-area-inset-left)); bottom: 28px;
+             width: 92px; height: 92px; font-size: 30px; }
+  #t-right { left: calc(124px + env(safe-area-inset-left)); bottom: 28px;
+             width: 92px; height: 92px; font-size: 30px; }
+  #t-gas   { right: calc(16px + env(safe-area-inset-right)); bottom: 24px;
+             width: 108px; height: 108px; font-size: 18px;
+             background: rgba(26,110,56,0.45); border-color: rgba(120,255,160,0.4); }
+  #t-brake { right: calc(138px + env(safe-area-inset-right)); bottom: 24px;
+             width: 92px; height: 92px; font-size: 16px;
+             background: rgba(130,28,28,0.45); border-color: rgba(255,130,120,0.4); }
+  #t-hb    { right: calc(154px + env(safe-area-inset-right)); bottom: 128px;
+             width: 54px; height: 54px; font-size: 13px; }
+  /* manual-only sequential shift pads, stacked just above the GAS pedal */
+  #t-up    { right: calc(16px + env(safe-area-inset-right)); bottom: 200px;
+             width: 50px; height: 50px; font-size: 26px; }
+  #t-down  { right: calc(72px + env(safe-area-inset-right)); bottom: 200px;
+             width: 50px; height: 50px; font-size: 26px; }
+  #touch-ui .shift { background: rgba(40,46,58,0.5); border-color: rgba(180,200,230,0.45); }
+  #t-actions { position: fixed; top: calc(8px + env(safe-area-inset-top)); left: 50%;
+               transform: translateX(-50%); display: flex; gap: 10px; z-index: 20;
+               pointer-events: auto; }
+  #t-actions .tbtn { position: relative; width: 58px; height: 42px;
+                     font-size: 13px; border-radius: 12px; }
+
+  /* ---------- settings panel ---------- */
+  #settings { position: fixed; inset: 0; z-index: 50; background: rgba(3,7,14,0.78);
+    display: flex; align-items: center; justify-content: center; pointer-events: auto; }
+  #settings-card { background: rgba(13,19,28,0.97); border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 16px; padding: 18px 22px; color: #fff; max-height: 88vh; overflow-y: auto;
+    min-width: 340px; max-width: 92vw; font-family: inherit; }
+  #settings-card h2 { margin: 0 0 12px; font-size: 18px; color: #ffd24a; letter-spacing: 2px; }
+  .set-tabs { display: flex; gap: 4px; margin: 0 0 14px; border-bottom: 1px solid rgba(255,255,255,0.12); }
+  .set-tab { background: none; border: none; color: #9aa3ad; font-family: inherit; font-size: 13px;
+    font-weight: 700; letter-spacing: 1px; padding: 7px 14px 9px; cursor: pointer;
+    border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .set-tab:hover { color: #dfe4ea; }
+  .set-tab.active { color: #ffd24a; border-bottom-color: #ffd24a; }
+  .set-row { margin-bottom: 11px; }
+  .set-title { font-size: 11px; opacity: 0.65; margin-bottom: 5px; letter-spacing: 1px; }
+  .set-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+  .set-btn { background: rgba(255,255,255,0.07); color: #dfe4ea; font-family: inherit;
+    border: 1px solid rgba(255,255,255,0.18); border-radius: 9px; padding: 8px 14px;
+    font-size: 13px; font-weight: 600; cursor: pointer; }
+  .set-btn.active { background: rgba(64,130,200,0.45); border-color: #7ec8ff; color: #fff; }
+  .set-btn.danger { border-color: rgba(255,110,100,0.5); color: #ff9d94; }
+  #set-resume { width: 100%; margin-top: 8px; padding: 12px; font-size: 15px;
+    background: rgba(50,160,90,0.35); border-color: rgba(120,255,160,0.45); border-radius: 10px;
+    color: #fff; border-style: solid; border-width: 1px; font-weight: 700; cursor: pointer;
+    font-family: inherit; }
+
+  /* ---------- main menu ---------- */
+  #menu { position: fixed; inset: 0; z-index: 80; pointer-events: auto; overflow-y: auto;
+    background: radial-gradient(ellipse at 50% 0%, rgba(20,34,52,0.92), rgba(3,7,13,0.96));
+    display: flex; align-items: flex-start; justify-content: center; }
+  #menu-inner { width: min(760px, 94vw); padding: 24px 26px;
+    margin: auto;                          /* center when it fits, scroll-from-top when it doesn't */
+    padding-top: max(24px, env(safe-area-inset-top));
+    padding-bottom: max(24px, env(safe-area-inset-bottom)); }
+  #menu h1 { font-size: 30px; font-weight: 800; letter-spacing: 3px; color: #fff; margin: 0 0 6px; }
+  #menu h1 span { color: #ffd24a; margin-left: 10px; }
+  .menu-sec { font-size: 12px; letter-spacing: 2px; color: #8aa0b6; margin: 18px 0 8px; }
+  #menu-tracks { display: flex; gap: 12px; flex-wrap: wrap; }
+  .menu-card { background: rgba(255,255,255,0.05); border: 1.5px solid rgba(255,255,255,0.14);
+    border-radius: 12px; padding: 10px; cursor: pointer; width: 172px; transition: border-color .15s, background .15s; }
+  .menu-card:hover { background: rgba(255,255,255,0.09); }
+  .menu-card.active { border-color: #7ec8ff; background: rgba(64,130,200,0.2); }
+  .menu-card canvas { width: 150px; height: 110px; display: block; }
+  .mc-name { color: #fff; font-size: 14px; font-weight: 700; margin-top: 6px; }
+  .mc-meta { color: #93a3b4; font-size: 12px; margin-top: 2px; }
+  #menu-cars { display: flex; gap: 8px; flex-wrap: wrap; }
+  .menu-carbtn { background: rgba(255,255,255,0.06); color: #dfe4ea; border: 1.5px solid rgba(255,255,255,0.16);
+    border-radius: 9px; padding: 9px 16px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .menu-carbtn.active { border-color: #7ec8ff; background: rgba(64,130,200,0.35); color: #fff; }
+  #menu-start { margin-top: 22px; width: 100%; padding: 15px; font-size: 17px; font-weight: 800;
+    letter-spacing: 3px; color: #07140e; background: linear-gradient(180deg,#7ee0a8,#46c483);
+    border: none; border-radius: 11px; cursor: pointer; font-family: inherit; }
+  #menu-start:hover { filter: brightness(1.08); }
+  /* compact layout for short (landscape phone) screens so nothing is clipped */
+  @media (max-height: 560px) {
+    #menu-inner { padding: 14px 20px; }
+    #menu h1 { font-size: 21px; margin-bottom: 2px; }
+    .menu-sec { margin: 9px 0 5px; }
+    #menu-tracks { gap: 8px; }
+    .menu-card { width: 132px; padding: 7px; }
+    .menu-card canvas { width: 118px; height: 78px; }
+    .mc-name { font-size: 12px; }
+    .mc-meta { font-size: 10px; }
+    .menu-carbtn { padding: 7px 12px; font-size: 13px; }
+    #menu-start { margin-top: 12px; padding: 11px; font-size: 15px; }
+  }
+
+  #tap-start { position: fixed; inset: 0; z-index: 99; background: rgba(4,9,17,0.94);
+    display: flex; align-items: center; justify-content: center; color: #fff;
+    text-align: center; pointer-events: auto; }
+  #tap-start h2 { font-size: 22px; letter-spacing: 2px; color: #ffd24a; margin-bottom: 8px; }
+  #tap-start p { font-size: 16px; opacity: 0.8; animation: pulse 1.6s infinite; }
+  @keyframes pulse { 50% { opacity: 0.35; } }
+
+  /* ---------- compact HUD on touch devices ---------- */
+  @media (pointer: coarse) {
+    #lap-cur { font-size: 22px; }
+    #lap-delta { font-size: 15px; min-height: 18px; }
+    #lap-last, #lap-best, #lap-sector { font-size: 11px; }
+    #section-name { font-size: 17px; }
+    #section-dist { font-size: 10px; }
+    #section { top: 8px; right: calc(10px + env(safe-area-inset-right)); }
+    #timing { top: 8px; left: calc(10px + env(safe-area-inset-left)); }
+    #minimap-wrap { bottom: 136px; left: calc(12px + env(safe-area-inset-left)); }
+    #minimap { width: 140px; height: 140px; }
+    #bottom-right { bottom: 142px; right: calc(12px + env(safe-area-inset-right)); }
+    #telemetry { width: 168px; height: 104px; }
+    #speedbar { font-size: 14px; }
+    #assists { font-size: 10px; }
+    #reset-btn { display: none; }
+    #help { display: none !important; }
+  }
+</style>
+<!-- three.js resolved locally by Vite (offline-capable for Capacitor) -->
+<!-- Cloudflare Web Analytics -->
+<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "5f92ae19fb414d8e985699513444fda5"}'></script>
+<!-- End Cloudflare Web Analytics -->
+</head>
+<body>
+<div id="app"></div>
+
+<div id="timing" class="hud">
+  <div id="lap-cur">0:00.000</div>
+  <div id="lap-delta"></div>
+  <div id="lap-last">LAST  --:--.---</div>
+  <div id="lap-best">BEST  --:--.---</div>
+  <div id="lap-sector"></div>
+</div>
+
+<div id="section" class="hud">
+  <div id="section-name"></div>
+  <div id="section-dist"></div>
+</div>
+
+<div id="minimap-wrap" class="hud"><canvas id="minimap" width="230" height="230"></canvas></div>
+
+<div id="bottom-right" class="hud">
+  <canvas id="telemetry" width="210" height="130"></canvas>
+  <div id="speedbar">0 km/h</div>
+  <div id="assists"></div>
+</div>
+
+<div id="center-msg" class="hud"></div>
+
+<button id="reset-btn">RESET (R)</button>
+
+<div id="help" class="hud">
+  <h1>NÜRBURGRING — 20.7 km</h1>
+  <table>
+    <tr><td class="k">↑ / W</td><td>Throttle</td><td class="k">↓ / S</td><td>Brake (reverse at standstill)</td></tr>
+    <tr><td class="k">← → / A D</td><td>Steer</td><td class="k">Space</td><td>Handbrake</td></tr>
+    <tr><td class="k">M</td><td>Auto / manual shift</td><td class="k">↑ / ↓</td><td>Gear up/down (manual — pedals W/S)</td></tr>
+    <tr><td class="k">C</td><td>Camera (cockpit/hood/chase)</td><td class="k">R</td><td>Reset to track</td></tr>
+    <tr><td class="k">T</td><td>Traction control</td><td class="k">B</td><td>ABS</td></tr>
+    <tr><td class="k">N</td><td>Time / weather</td><td class="k">G</td><td>Ghost lap</td></tr>
+    <tr><td class="k">L</td><td>Racing line (green=throttle / red=brake)</td><td class="k"></td><td></td></tr>
+    <tr><td class="k">P</td><td>Pause</td><td class="k">H</td><td>This help</td></tr>
+  </table>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
