@@ -57,6 +57,7 @@ export class TouchInput {
       el.style.display = 'none';
       el.addEventListener('pointerdown', e => {
         e.preventDefault();
+        el.setPointerCapture(e.pointerId);
         this.anyInput = true;
         if (this.onKey) this.onKey(code);
       });
@@ -72,6 +73,7 @@ export class TouchInput {
       const b = BTN('t-' + code, label, 'small');
       b.addEventListener('pointerdown', e => {
         e.preventDefault();
+        b.setPointerCapture(e.pointerId);
         if (this.onKey) this.onKey(code);
       });
       bar.appendChild(b);
@@ -80,15 +82,16 @@ export class TouchInput {
     document.body.appendChild(root);
 
     const hold = (el, key) => {
-      const set = (v) => (e) => {
+      el.addEventListener('pointerdown', e => {
         e.preventDefault();
-        this._state[key] = v;
+        el.setPointerCapture(e.pointerId);  // keep events even if finger slides off button
+        this._state[key] = true;
         this.anyInput = true;
-      };
-      el.addEventListener('pointerdown', set(true));
-      el.addEventListener('pointerup', set(false));
-      el.addEventListener('pointercancel', set(false));
-      el.addEventListener('pointerleave', set(false));
+      });
+      const release = e => { e.preventDefault(); this._state[key] = false; };
+      el.addEventListener('pointerup', release);
+      el.addEventListener('pointercancel', release);
+      // no pointerleave — setPointerCapture makes it redundant
     };
     hold(this.leftBtn, 'left');
     hold(this.rightBtn, 'right');

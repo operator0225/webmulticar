@@ -52,6 +52,7 @@ renderer.shadowMap.enabled = TIER.shadow > 0;
 renderer.shadowMap.type = TIER.soft ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 document.getElementById('app').appendChild(renderer.domElement);
+renderer.domElement.style.touchAction = 'none';  // prevent browser scroll/zoom eating touch events
 
 const scene = new THREE.Scene();
 const atmo = new Atmosphere(scene, renderer, { shadow: TIER.shadow, farScale: TIER.farScale });
@@ -352,24 +353,24 @@ let headLean = new THREE.Vector3();
 const chasePos = new THREE.Vector3();
 let chaseInit = false;
 let _camYaw = 0;          // chase-camera yaw offset for look-around
-let _dragStartX = null;
-let _dragStartYaw = 0;
+let _dragLastX = null;    // last pointer X for delta-based orbit
 let _flipTime = 0;        // seconds the car has been upside-down
 
-// touch/mouse drag to orbit the chase camera
+// touch/mouse drag to orbit the chase camera (delta accumulation, not absolute)
 {
   const cv = renderer.domElement;
   cv.addEventListener('pointerdown', e => {
     if (camMode !== 2) return;
-    _dragStartX = e.clientX; _dragStartYaw = _camYaw;
+    _dragLastX = e.clientX;
     cv.setPointerCapture(e.pointerId);
   });
   cv.addEventListener('pointermove', e => {
-    if (camMode !== 2 || _dragStartX === null) return;
-    const dx = (e.clientX - _dragStartX) / window.innerWidth;
-    _camYaw = _dragStartYaw - dx * Math.PI * 2;
+    if (camMode !== 2 || _dragLastX === null) return;
+    const dx = (e.clientX - _dragLastX) / window.innerWidth;
+    _camYaw -= dx * Math.PI * 4.0;   // 4× = ~1/4 screen swipe = 180°, very responsive
+    _dragLastX = e.clientX;
   });
-  const endDrag = () => { _dragStartX = null; };
+  const endDrag = () => { _dragLastX = null; };
   cv.addEventListener('pointerup', endDrag);
   cv.addEventListener('pointercancel', endDrag);
 }
@@ -389,7 +390,7 @@ function updateCamera(dtVis) {
     const camDist = 8.0;
     const camH    = 2.4;
     // drift yaw back toward 0 when not dragging
-    if (_dragStartX === null) _camYaw *= Math.max(0, 1 - dtVis * 1.8);
+    if (_dragLastX === null) _camYaw *= Math.max(0, 1 - dtVis * 0.25);  // very slow drift back (~4s)
     const sinY = Math.sin(_camYaw), cosY = Math.cos(_camYaw);
     const behind = new THREE.Vector3(camDist * sinY, camH, camDist * cosY)
       .applyQuaternion(q).add(vehicle.pos);
