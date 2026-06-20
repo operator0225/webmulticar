@@ -65,10 +65,10 @@ export class TouchInput {
     root.append(this.leftBtn, this.rightBtn, this.gasBtn, this.brakeBtn, this.hbBtn,
       this.upBtn, this.downBtn);
 
-    // minimal in-game bar: pause/settings + reset only (rest lives in settings)
+    // minimal in-game bar: pause/settings + cam + reset
     const bar = document.createElement('div');
     bar.id = 't-actions';
-    for (const [label, code] of [['MENU', 'KeyP'], ['RESET', 'KeyR']]) {
+    for (const [label, code] of [['MENU', 'KeyP'], ['CAM', 'KeyC'], ['RESET', 'KeyR']]) {
       const b = BTN('t-' + code, label, 'small');
       b.addEventListener('pointerdown', e => {
         e.preventDefault();

@@ -109,6 +109,7 @@ input.onKey = code => {
     case 'KeyC':
       camMode = (camMode + 1) % 3;
       carVis.setCameraMode(camMode);
+      updateCamBtn();
       break;
     case 'ShiftLeft': case 'ShiftRight': case 'ArrowUp':
       if (!vehicle.auto) vehicle.shiftUp();
@@ -221,7 +222,7 @@ const settings = new SettingsPanel({
   }),
   setCar,
   setLineMode: m => { raceLine.setMode(m); },
-  setCam: i => { camMode = i; carVis.setCameraMode(i); },
+  setCam: i => { camMode = i; carVis.setCameraMode(i); updateCamBtn(); },
   setCtrl: m => { if (TOUCH) input.setMode(m); },
   setPreset: i => { atmo.apply(i); applyNight(); },
   setTier: name => {
@@ -297,9 +298,26 @@ function recoverToTrack() {
 const resetBtn = document.getElementById('reset-btn');
 resetBtn.addEventListener('click', () => {
   recoverToTrack();
-  resetBtn.blur();          // give keyboard focus back to the game
+  resetBtn.blur();
   audio.start();
 });
+
+const camBtn = document.getElementById('cam-btn');
+function updateCamBtn() {
+  if (!camBtn) return;
+  const is3rd = camMode === 2;
+  camBtn.textContent = is3rd ? '🎥 1인칭 (C)' : '🎥 3인칭 (C)';
+  camBtn.classList.toggle('active', is3rd);
+}
+camBtn.addEventListener('click', () => {
+  // toggle between 3rd-person (2) and cockpit (0)
+  camMode = camMode === 2 ? 0 : 2;
+  carVis.setCameraMode(camMode);
+  updateCamBtn();
+  camBtn.blur();
+  audio.start();
+});
+updateCamBtn();
 
 // reverse handling: holding brake at standstill engages reverse
 function autoReverse() {

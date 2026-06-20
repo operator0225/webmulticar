@@ -63,6 +63,15 @@
     font-family: inherit; }
   #reset-btn:hover { background: rgba(40,60,85,0.85); border-color: #7ec8ff; }
 
+  #cam-btn { position: fixed; bottom: 14px; left: calc(50% + 108px);
+    pointer-events: auto; cursor: pointer; background: rgba(12,18,26,0.7);
+    color: #fff; border: 1px solid rgba(255,255,255,0.3); border-radius: 8px;
+    padding: 8px 16px; font-size: 14px; font-weight: 600; letter-spacing: 1px;
+    font-family: inherit; white-space: nowrap; }
+  #cam-btn:hover { background: rgba(40,60,85,0.85); border-color: #7ec8ff; }
+  #cam-btn.active { background: rgba(30,70,140,0.85); border-color: #7ec8ff; color: #7ec8ff; }
+  @media (pointer: coarse) { #cam-btn { display: none; } }
+
   /* ---------- touch controls ---------- */
   #touch-ui .tbtn { position: fixed; display: flex; align-items: center; justify-content: center;
     background: rgba(18,26,38,0.42); border: 1.5px solid rgba(255,255,255,0.30);
@@ -218,6 +227,7 @@
 <div id="center-msg" class="hud"></div>
 
 <button id="reset-btn">RESET (R)</button>
+<button id="cam-btn">🎥 3인칭 (C)</button>
 
 <div id="help" class="hud">
   <h1>NÜRBURGRING — 20.7 km</h1>
