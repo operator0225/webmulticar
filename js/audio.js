@@ -67,7 +67,7 @@ export class CarAudio {
     this.scrub = noiseSrc('bandpass', 420, 2.0);     // combined-slip grind
     this.roar = noiseSrc('lowpass', 280, 0.7);       // asphalt rumble
     this.grass = noiseSrc('lowpass', 220, 0.8);
-    this.scrapeN = noiseSrc('highpass', 1800, 1.0);
+    this.scrapeN = noiseSrc('bandpass', 700, 1.5);
     this.brakeRub = noiseSrc('bandpass', 1400, 1.6);  // pad-on-disc friction hiss
     this.rain = noiseSrc('highpass', 1100, 0.3);      // rain hiss (weather)
     this.rainLow = noiseSrc('bandpass', 420, 0.6);    // heavier drumming layer

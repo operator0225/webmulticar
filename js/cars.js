@@ -43,7 +43,7 @@ export const CARS = {
       // turbo muffles upper harmonics (matched to an Elantra N track recording).
       hpHz: 105, hpQ: 0.7, peakF: 280, peakQ: 0.6, peakDb: 3.5,
     },
-    visual: { color: 0x1f4f9e, accent: 0xc8102e, wing: 'lip', roofY: 0.64, rearY: 0.36 },
+    visual: { type: 'avante', color: 0x1f4f9e, accent: 0xc8102e, wing: 'lip', roofY: 0.64, rearY: 0.36 },
     dialMax: 8, dialRed: 7, dialSpeed: 300,
   },
 
@@ -87,7 +87,7 @@ export const CARS = {
       hpHz: 195, hpQ: 0.7, cutF: 150, cutQ: 1.1, cutDb: -6.0,
       peakF: 950, peakQ: 0.7, peakDb: 4.0, shelfF: 4200, shelfDb: 1.5,
     },
-    visual: { color: 0xf2c200, accent: 0x111111, wing: 'gt', roofY: 0.58, rearY: 0.40 },
+    visual: { type: 'gt3', color: 0xf2c200, accent: 0x111111, wing: 'gt', roofY: 0.58, rearY: 0.40 },
     dialMax: 10, dialRed: 9, dialSpeed: 340,
   },
 
@@ -134,7 +134,49 @@ export const CARS = {
       hpHz: 200, hpQ: 0.7, cutF: 150, cutQ: 1.1, cutDb: -7.0,
       peakF: 950, peakQ: 0.7, peakDb: 5.0, shelfF: 4200, shelfDb: 2.5,
     },
-    visual: { color: 0xa7d84b, accent: 0x111111, wing: 'gt', roofY: 0.57, rearY: 0.40 },
+    visual: { type: 'gt3rs', color: 0xa7d84b, accent: 0x111111, wing: 'gt', roofY: 0.57, rearY: 0.40 },
+    dialMax: 10, dialRed: 9, dialSpeed: 320,
+  },
+
+  gt3r: {
+    id: 'gt3r',
+    name: '911 GT3 R',
+    mass: 1050,                          // FIA GT3 spec, dry
+    inertia: [1900, 2200, 520],
+    comH: 0.37,
+    drive: 'RWD',
+    wheels: {
+      fz: -1.50, rz: 0.96, htF: 0.84, htR: 0.88,
+      attachY: 0.21, restLen: 0.24, radius: 0.34, iw: 1.5,
+      kF: 90000, kR: 120000, cBF: 5600, cRF: 8800, cBR: 8400, cRR: 13200,
+      maxC: 0.14, muF: 1.38, muR: 1.44,            // slick tires
+    },
+    arbF: 56000, arbR: 38000,
+    engine: {                            // 4.2 NA flat-6 race engine, ~515 kW (~700 hp)
+      rpm: [900, 2000, 3000, 4000, 5000, 6000, 7000, 7800, 8500, 9000, 9400],
+      nm:  [200, 280,  360,  430,  500,  560,  600,  610,  590,  550,  120],
+      idle: 1000, redline: 9200, engBrake: [30, 0.018], shiftDown: 4000,
+    },
+    gears: [3.82, 2.40, 1.74, 1.36, 1.12, 0.98, 0.86], final: 4.40, reverse: 3.5,
+    brakeT: 8200, bias: 0.59,
+    aero: { cda: 1.35, cla: 3.80 },     // full race aero package
+    audio: {
+      cyl: 6, turbo: false,
+      orders: [1, 0.5, 1.5, 2, 3, 1.03],
+      gains:  [0.38, 0.10, 0.36, 0.26, 0.18, 0.28],
+      gearbox: 'sequential',
+      tone: 2200, rasp: 0.70, pops: 0.35, intake: 1.0, sub: 0.05,
+    },
+    engine_model: {
+      cyl: 6, intakeLen: 76, exhaustLen: 40, extractorLen: 44,
+      straightPipeLen: 46, mufflerElements: [4, 6, 9, 11], mufflerAction: 0.08,
+      ignitionTime: 0.006, intakeOpen: 0.24, intakeClosed: 0.9,
+      exhaustOpen: 0.24, exhaustClosed: 0.95,
+      outletGain: 1.35, intakeMix: 1.1, blockMix: 0.50, decelPops: 0.2, level: 0.75,
+      hpHz: 210, hpQ: 0.7, cutF: 150, cutQ: 1.1, cutDb: -8.0,
+      peakF: 1100, peakQ: 0.65, peakDb: 6.0, shelfF: 4500, shelfDb: 3.0,
+    },
+    visual: { type: 'gt3r', color: 0x0a0a0a, accent: 0xcc1400, wing: 'gt3r', roofY: 0.58, rearY: 0.40 },
     dialMax: 10, dialRed: 9, dialSpeed: 320,
   },
 

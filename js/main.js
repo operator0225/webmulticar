@@ -380,7 +380,7 @@ function updateCamera(dtVis) {
 
   // auto-recovery: reset car if upside-down for > 3 s
   const bodyUpY = new THREE.Vector3(0, 1, 0).applyQuaternion(q).y;
-  if (bodyUpY < -0.3 && Math.abs(vehicle.speed) < 3) {
+  if (bodyUpY < -0.7 && Math.abs(vehicle.speed) < 3) {
     _flipTime += dtVis;
     if (_flipTime > 3.0) { recoverToTrack(); _flipTime = 0; hud.flash('Auto-reset: car flipped'); }
   } else { _flipTime = 0; }

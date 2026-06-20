@@ -113,9 +113,18 @@ export class CarVisual {
 
   // ---------------------------------------------------------------- exterior
   _buildExterior() {
+    const t = this.type;
+    if (t === 'avante') { this._buildAvanteExt(); return; }
+    if (t === 'gt3')    { this._buildGT3Ext();    return; }
+    if (t === 'gt3rs')  { this._buildGT3RSExt();  return; }
+    if (t === 'gt3r')   { this._buildGT3RExt();   return; }
+    this._buildGenericExt();
+  }
+
+  _buildGenericExt() {
     const V = this.spec.visual;
     const roofY = V.roofY, rearY = V.rearY;
-    const vRoofY = roofY + 0.38;  // visual cabin height (taller than physics roof)
+    const vRoofY = roofY + 0.18;  // visual cabin height (taller than physics roof)
     const e = this.exterior;
 
     const paint = new THREE.MeshPhysicalMaterial({
@@ -239,6 +248,546 @@ export class CarVisual {
     }
 
     this._buildWheels(0.26);
+  }
+
+  // ---------------------------------------------------------------- Elantra N
+  _buildAvanteExt() {
+    const V = this.spec.visual;
+    const e = this.exterior;
+    const paint = new THREE.MeshPhysicalMaterial({
+      color: V.color, metalness: 0.72, roughness: 0.15,
+      clearcoat: 1.0, clearcoatRoughness: 0.04, envMapIntensity: 3.2,
+    });
+    const dark = new THREE.MeshStandardMaterial({ color: 0x10131a, roughness: 0.55, metalness: 0.10 });
+    const chrome = new THREE.MeshStandardMaterial({ color: 0xd0d5dc, metalness: 0.94, roughness: 0.10, envMapIntensity: 3.0 });
+    const glass = new THREE.MeshPhysicalMaterial({ color: 0x0c1420, metalness: 0.05, roughness: 0.06, transparent: true, opacity: 0.60, envMapIntensity: 2.4 });
+    const red = new THREE.MeshStandardMaterial({ color: V.accent, roughness: 0.4, metalness: 0.1 });
+    const lightMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, emissive: 0xb0c4d8, emissiveIntensity: 0.5, roughness: 0.3 });
+    this._headlightMat = lightMat;
+    const tailMat = new THREE.MeshStandardMaterial({ color: 0x55060a, emissive: 0x990a10, emissiveIntensity: 0.7, roughness: 0.3 });
+
+    const mk = (geo, mat, x, y, z, rx = 0, ry = 0, rz = 0) => {
+      const m = new THREE.Mesh(geo, mat);
+      m.position.set(x, y, z); m.rotation.set(rx, ry, rz); m.castShadow = true; e.add(m); return m;
+    };
+    const vRoofY = V.roofY + 0.18;
+    const rearY = V.rearY;
+
+    // ── LOWER BODY & SILL ─────────────────────────────────────────────
+    mk(new THREE.BoxGeometry(1.66, 0.26, 4.26), paint, 0, -0.14, 0.02);
+    // angular sill extensions (wider stance)
+    for (const sx of [-1, 1]) {
+      mk(new THREE.BoxGeometry(0.06, 0.18, 3.60), red, sx * 0.862, -0.24, 0.04);
+    }
+
+    // ── DOOR PANELS ──────────────────────────────────────────────────
+    mk(new THREE.BoxGeometry(1.52, 0.54, 2.30), paint, 0, 0.10, 0.04);
+
+    // ── FRONT FENDERS (angular crease lines) ──────────────────────────
+    for (const sx of [-1, 1]) {
+      mk(new THREE.BoxGeometry(0.28, 0.62, 1.36), paint, sx * 0.76, 0.04, -1.32);
+      mk(new THREE.BoxGeometry(0.04, 0.24, 1.28), paint, sx * 0.90, 0.18, -1.32); // flare lip
+    }
+    // ── REAR FENDERS (widened) ──────────────────────────────────────
+    for (const sx of [-1, 1]) {
+      mk(new THREE.BoxGeometry(0.30, 0.66, 1.56), paint, sx * 0.78, 0.06, 1.20);
+      mk(new THREE.BoxGeometry(0.04, 0.26, 1.48), paint, sx * 0.93, 0.20, 1.20);
+    }
+
+    // ── HOOD (flat with sharp crease) ──────────────────────────────
+    mk(new THREE.BoxGeometry(1.76, 0.06, 1.84), paint, 0, 0.40, -1.14, 0.08);
+    // hood center crease ridge
+    mk(new THREE.BoxGeometry(0.16, 0.03, 1.84), paint, 0, 0.44, -1.14, 0.08);
+
+    // ── CABIN SIDES ──────────────────────────────────────────────────
+    for (const sx of [-1, 1]) {
+      mk(new THREE.BoxGeometry(0.12, vRoofY - 0.18, 1.52), paint, sx * 0.678, 0.20 + (vRoofY - 0.18) * 0.5, -0.08);
+    }
+    // A-pillars (lean forward sharply)
+    { const h = vRoofY - 0.14;
+      for (const sx of [-1, 1])
+        mk(new THREE.BoxGeometry(0.10, h, 0.12), paint, sx * 0.62, 0.18 + h * 0.5, -0.58, 0.48);
+    }
+    // C-pillars (fastback slope)
+    { const h = 0.34;
+      for (const sx of [-1, 1])
+        mk(new THREE.BoxGeometry(0.10, h, 0.30), paint, sx * 0.64, vRoofY - 0.08, 0.92, -0.50);
+    }
+
+    // ── ROOF ──────────────────────────────────────────────────────────
+    mk(new THREE.BoxGeometry(1.30, 0.10, 1.46), paint, 0, vRoofY - 0.02, 0.10);
+
+    // ── FASTBACK REAR SLOPE ───────────────────────────────────────────
+    mk(new THREE.BoxGeometry(1.26, 0.06, 0.68), paint, 0, rearY + 0.16, 1.68, -0.28);
+
+    // ── TRUNK LIP SPOILER ─────────────────────────────────────────────
+    mk(new THREE.BoxGeometry(1.28, 0.06, 0.12), paint, 0, rearY + 0.32, 1.90);
+    mk(new THREE.BoxGeometry(1.28, 0.04, 0.06), dark, 0, rearY + 0.36, 1.86);
+
+    // ── FRONT BUMPER (angular, triangular grilles) ────────────────────
+    mk(new THREE.BoxGeometry(1.56, 0.22, 0.26), paint, 0, 0.14, -2.04);
+    mk(new THREE.BoxGeometry(1.56, 0.28, 0.24), dark, 0, -0.12, -2.06); // lower fascia
+    // large center grille opening
+    mk(new THREE.BoxGeometry(0.60, 0.18, 0.06), dark, 0, -0.06, -2.16);
+    // triangular side grilles
+    for (const sx of [-1, 1]) {
+      mk(new THREE.BoxGeometry(0.32, 0.14, 0.06), dark, sx * 0.52, 0.02, -2.16);
+      mk(new THREE.BoxGeometry(0.28, 0.04, 0.22), red, sx * 0.54, -0.22, -2.10); // lower red lip
+    }
+    // front splitter
+    mk(new THREE.BoxGeometry(1.62, 0.03, 0.30), dark, 0, -0.32, -2.10, -0.08);
+    // splitter red accent
+    mk(new THREE.BoxGeometry(1.62, 0.02, 0.04), red, 0, -0.30, -2.24);
+
+    // ── REAR BUMPER ───────────────────────────────────────────────────
+    mk(new THREE.BoxGeometry(1.58, 0.38, 0.24), paint, 0, -0.02, 2.08);
+    // diffuser with fins
+    mk(new THREE.BoxGeometry(1.32, 0.10, 0.30), dark, 0, -0.30, 2.05, -0.16);
+    for (const fx of [-0.44, -0.22, 0, 0.22, 0.44]) {
+      mk(new THREE.BoxGeometry(0.015, 0.08, 0.28), dark, fx, -0.31, 2.05, -0.16);
+    }
+    // rear red accent strip
+    mk(new THREE.BoxGeometry(1.58, 0.02, 0.04), red, 0, -0.28, 2.18);
+
+    // ── TAILLIGHTS (LED strip style) ──────────────────────────────────
+    mk(new THREE.BoxGeometry(1.54, 0.04, 0.04), tailMat, 0, rearY - 0.18, 2.17);
+    // connection strip across trunk
+    mk(new THREE.BoxGeometry(0.90, 0.02, 0.03), tailMat, 0, rearY - 0.06, 2.18);
+
+    // ── HEADLIGHTS (LED strip style) ─────────────────────────────────
+    for (const sx of [-1, 1]) {
+      mk(new THREE.BoxGeometry(0.38, 0.04, 0.05), lightMat, sx * 0.58, 0.24, -2.16); // main strip
+      mk(new THREE.BoxGeometry(0.06, 0.16, 0.05), lightMat, sx * 0.80, 0.18, -2.14); // vertical DRL
+    }
+    // N logo front grille
+    mk(new THREE.BoxGeometry(0.10, 0.06, 0.04), chrome, 0, 0.02, -2.20);
+
+    // ── GLASS ──────────────────────────────────────────────────────────
+    { const m = new THREE.Mesh(new THREE.PlaneGeometry(1.24, vRoofY - 0.20), glass);
+      m.position.set(0, (0.24 + vRoofY - 0.06) * 0.5, -0.58); m.rotation.x = 0.50; e.add(m); }
+    { const m = new THREE.Mesh(new THREE.PlaneGeometry(1.18, 0.42), glass);
+      m.position.set(0, rearY + 0.12, 1.20); m.rotation.x = -0.44; e.add(m); }
+    for (const sx of [-1, 1]) {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(1.30, vRoofY - 0.28), glass);
+      m.position.set(sx * 0.740, 0.26 + (vRoofY - 0.28) * 0.5, -0.06); m.rotation.y = sx * Math.PI / 2; e.add(m);
+    }
+
+    // ── SIDE MIRRORS ─────────────────────────────────────────────────
+    for (const sx of [-1, 1]) mk(new THREE.BoxGeometry(0.07, 0.09, 0.19), dark, sx * 0.91, 0.36, -0.60);
+
+    // ── EXHAUST (center twin) ─────────────────────────────────────────
+    const pMat = new THREE.MeshStandardMaterial({ color: 0x8a8f96, metalness: 0.9, roughness: 0.3 });
+    const pGeo = new THREE.CylinderGeometry(0.046, 0.050, 0.10, 10); pGeo.rotateX(Math.PI / 2);
+    for (const px of [-0.12, 0.12]) mk(pGeo, pMat, px, -0.22, 2.16);
+
+    this._buildWheels(0.26);
+  }
+
+  // ---------------------------------------------------------------- 911 GT3
+  _buildGT3Ext() {
+    const V = this.spec.visual;
+    const e = this.exterior;
+    const paint = new THREE.MeshPhysicalMaterial({
+      color: V.color, metalness: 0.72, roughness: 0.14,
+      clearcoat: 1.0, clearcoatRoughness: 0.03, envMapIntensity: 3.4,
+    });
+    const dark = new THREE.MeshStandardMaterial({ color: 0x0e1118, roughness: 0.55, metalness: 0.12 });
+    const glass = new THREE.MeshPhysicalMaterial({ color: 0x0c1420, metalness: 0.05, roughness: 0.06, transparent: true, opacity: 0.58, envMapIntensity: 2.6 });
+    const chrome = new THREE.MeshStandardMaterial({ color: 0xc8cdd4, metalness: 0.92, roughness: 0.12, envMapIntensity: 2.8 });
+    const lightMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, emissive: 0xb0c4d8, emissiveIntensity: 0.5, roughness: 0.3 });
+    this._headlightMat = lightMat;
+    const tailMat = new THREE.MeshStandardMaterial({ color: 0x55060a, emissive: 0x990a10, emissiveIntensity: 0.7, roughness: 0.3 });
+    const mk = (geo, mat, x, y, z, rx = 0, ry = 0, rz = 0) => {
+      const m = new THREE.Mesh(geo, mat);
+      m.position.set(x, y, z); m.rotation.set(rx, ry, rz); m.castShadow = true; e.add(m); return m;
+    };
+    const vRoofY = V.roofY + 0.18;
+    const rearY = V.rearY;
+
+    // ── LOWER SILL ────────────────────────────────────────────────────
+    mk(new THREE.BoxGeometry(1.60, 0.26, 4.14), paint, 0, -0.14, 0.05);
+    // sill accents
+    for (const sx of [-1, 1]) mk(new THREE.BoxGeometry(0.05, 0.16, 3.40), dark, sx * 0.844, -0.24, 0.06);
+
+    // ── DOOR PANELS ──────────────────────────────────────────────────
+    mk(new THREE.BoxGeometry(1.46, 0.52, 2.24), paint, 0, 0.10, 0.05);
+
+    // ── FRONT FENDERS (rounded, narrow) ───────────────────────────────
+    for (const sx of [-1, 1]) {
+      mk(new THREE.BoxGeometry(0.24, 0.60, 1.30), paint, sx * 0.73, 0.04, -1.28);
+    }
+    // ── REAR FENDERS (wide haunches, most distinctive GT3 feature) ─────
+    for (const sx of [-1, 1]) {
+      mk(new THREE.BoxGeometry(0.40, 0.68, 1.60), paint, sx * 0.80, 0.08, 1.14);
+      mk(new THREE.BoxGeometry(0.06, 0.38, 1.52), paint, sx * 1.00, 0.18, 1.14); // outer haunch
+      // vent slats on rear fender
+      for (let vi = 0; vi < 3; vi++) {
+        mk(new THREE.BoxGeometry(0.04, 0.06, 0.20), dark, sx * 0.98, 0.28 - vi * 0.10, 0.80 + vi * 0.04);
+      }
+    }
+
+    // ── FRONT LID (GT3: engine in rear, front is luggage/frunk) ───────
+    mk(new THREE.BoxGeometry(1.72, 0.07, 1.80), paint, 0, 0.36, -1.16, 0.10);
+    // front lid crease
+    for (const sx of [-1, 1]) mk(new THREE.BoxGeometry(0.02, 0.04, 1.80), dark, sx * 0.50, 0.40, -1.16, 0.10);
+
+    // ── ENGINE LID (rear) ─────────────────────────────────────────────
+    mk(new THREE.BoxGeometry(1.56, 0.07, 1.04), paint, 0, rearY + 0.04, 1.24, -0.06);
+    // NACA duct on engine lid
+    mk(new THREE.BoxGeometry(0.30, 0.04, 0.42), dark, 0, rearY + 0.06, 0.98);
+    mk(new THREE.BoxGeometry(0.22, 0.02, 0.38), dark, 0, rearY + 0.08, 0.96);
+
+    // ── CABIN SIDES ──────────────────────────────────────────────────
+    for (const sx of [-1, 1]) {
+      mk(new THREE.BoxGeometry(0.12, vRoofY - 0.18, 1.50), paint, sx * 0.660, 0.18 + (vRoofY - 0.18) * 0.5, -0.06);
+    }
+    // A-pillars (rounded forward lean)
+    { const h = vRoofY - 0.16;
+      for (const sx of [-1, 1])
+        mk(new THREE.BoxGeometry(0.10, h, 0.11), paint, sx * 0.59, 0.16 + h * 0.5, -0.56, 0.46);
+    }
+
+    // ── ROOF (gently curved top) ──────────────────────────────────────
+    mk(new THREE.BoxGeometry(1.28, 0.10, 1.44), paint, 0, vRoofY - 0.02, 0.10);
+    mk(new THREE.BoxGeometry(0.96, 0.03, 1.44), paint, 0, vRoofY + 0.03, 0.10); // crown
+
+    // ── REAR SLANT (911 fastback) ─────────────────────────────────────
+    mk(new THREE.BoxGeometry(1.24, 0.06, 0.72), paint, 0, rearY + 0.18, 1.70, -0.30);
+
+    // ── SWAN-NECK WING ────────────────────────────────────────────────
+    // main plane
+    mk(new THREE.BoxGeometry(1.56, 0.034, 0.40), dark, 0, rearY + 0.46, 1.86, -0.08);
+    // gurney flap
+    mk(new THREE.BoxGeometry(1.56, 0.06, 0.02), dark, 0, rearY + 0.50, 1.66);
+    // swan-neck pylons (twin curved arches per side — approximated as offset boxes)
+    for (const sx of [-1, 1]) {
+      mk(new THREE.BoxGeometry(0.028, 0.30, 0.06), dark, sx * 0.36, rearY + 0.30, 1.72, 0.28);
+      mk(new THREE.BoxGeometry(0.028, 0.16, 0.10), dark, sx * 0.36, rearY + 0.44, 1.80, -0.10);
+      // endplates
+      mk(new THREE.BoxGeometry(0.06, 0.28, 0.44), dark, sx * 0.78, rearY + 0.36, 1.86, -0.08);
+    }
+
+    // ── FRONT BUMPER (round GT3 nose) ────────────────────────────────
+    mk(new THREE.BoxGeometry(1.52, 0.22, 0.24), paint, 0, 0.14, -2.06);
+    mk(new THREE.BoxGeometry(1.52, 0.30, 0.22), dark, 0, -0.12, -2.08);
+    // center air duct
+    mk(new THREE.BoxGeometry(0.68, 0.18, 0.06), dark, 0, -0.06, -2.18);
+    // side cooling scoops
+    for (const sx of [-1, 1]) {
+      mk(new THREE.BoxGeometry(0.28, 0.14, 0.06), dark, sx * 0.56, 0.04, -2.17);
+    }
+    mk(new THREE.BoxGeometry(1.58, 0.03, 0.28), dark, 0, -0.32, -2.12, -0.06); // splitter
+
+    // ── HEADLIGHTS (round, most distinctive) ─────────────────────────
+    for (const sx of [-1, 1]) {
+      const hGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.05, 22); hGeo.rotateX(Math.PI / 2);
+      mk(hGeo, lightMat, sx * 0.56, 0.20, -2.14);
+      // inner DRL ring
+      const rGeo = new THREE.TorusGeometry(0.12, 0.015, 8, 22); rGeo.rotateX(Math.PI / 2);
+      mk(rGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xeeddaa, emissiveIntensity: 0.8 }), sx * 0.56, 0.20, -2.12);
+    }
+
+    // ── REAR BUMPER & TAILLIGHTS ─────────────────────────────────────
+    mk(new THREE.BoxGeometry(1.54, 0.38, 0.24), paint, 0, -0.02, 2.10);
+    mk(new THREE.BoxGeometry(1.30, 0.09, 0.26), dark, 0, -0.30, 2.08, -0.16);
+    for (const fx of [-0.44, -0.22, 0, 0.22, 0.44]) {
+      mk(new THREE.BoxGeometry(0.015, 0.08, 0.24), dark, fx, -0.30, 2.08, -0.16);
+    }
+    // center LED bar across rear
+    mk(new THREE.BoxGeometry(1.54, 0.04, 0.04), tailMat, 0, rearY - 0.16, 2.18);
+    // outer tail clusters
+    for (const sx of [-1, 1]) mk(new THREE.BoxGeometry(0.28, 0.12, 0.04), tailMat, sx * 0.62, rearY - 0.12, 2.18);
+
+    // ── GLASS ─────────────────────────────────────────────────────────
+    { const m = new THREE.Mesh(new THREE.PlaneGeometry(1.22, vRoofY - 0.20), glass);
+      m.position.set(0, (0.22 + vRoofY - 0.06) * 0.5, -0.56); m.rotation.x = 0.48; e.add(m); }
+    { const m = new THREE.Mesh(new THREE.PlaneGeometry(1.18, 0.38), glass);
+      m.position.set(0, rearY + 0.14, 1.20); m.rotation.x = -0.42; e.add(m); }
+    for (const sx of [-1, 1]) {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(1.24, vRoofY - 0.28), glass);
+      m.position.set(sx * 0.726, 0.22 + (vRoofY - 0.28) * 0.5, -0.04); m.rotation.y = sx * Math.PI / 2; e.add(m);
+    }
+
+    // ── MIRRORS ───────────────────────────────────────────────────────
+    for (const sx of [-1, 1]) mk(new THREE.BoxGeometry(0.07, 0.10, 0.20), dark, sx * 0.90, 0.36, -0.60);
+
+    // ── EXHAUST (center twin pipes) ───────────────────────────────────
+    const pMat = new THREE.MeshStandardMaterial({ color: 0x8a8f96, metalness: 0.9, roughness: 0.3 });
+    const pGeo = new THREE.CylinderGeometry(0.046, 0.050, 0.10, 10); pGeo.rotateX(Math.PI / 2);
+    for (const px of [-0.10, 0.10]) mk(pGeo, pMat, px, -0.22, 2.16);
+
+    this._buildWheels(0.26);
+  }
+
+  // ---------------------------------------------------------------- 911 GT3 RS
+  _buildGT3RSExt() {
+    const V = this.spec.visual;
+    const e = this.exterior;
+    const paint = new THREE.MeshPhysicalMaterial({
+      color: V.color, metalness: 0.72, roughness: 0.14,
+      clearcoat: 1.0, clearcoatRoughness: 0.03, envMapIntensity: 3.4,
+    });
+    const dark = new THREE.MeshStandardMaterial({ color: 0x0e1118, roughness: 0.55, metalness: 0.12 });
+    const carbon = new THREE.MeshStandardMaterial({ color: 0x1a1c22, roughness: 0.22, metalness: 0.40, envMapIntensity: 1.8 });
+    const glass = new THREE.MeshPhysicalMaterial({ color: 0x0c1420, metalness: 0.05, roughness: 0.06, transparent: true, opacity: 0.58, envMapIntensity: 2.6 });
+    const lightMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, emissive: 0xb0c4d8, emissiveIntensity: 0.5, roughness: 0.3 });
+    this._headlightMat = lightMat;
+    const tailMat = new THREE.MeshStandardMaterial({ color: 0x55060a, emissive: 0x990a10, emissiveIntensity: 0.7, roughness: 0.3 });
+    const mk = (geo, mat, x, y, z, rx = 0, ry = 0, rz = 0) => {
+      const m = new THREE.Mesh(geo, mat);
+      m.position.set(x, y, z); m.rotation.set(rx, ry, rz); m.castShadow = true; e.add(m); return m;
+    };
+    const vRoofY = V.roofY + 0.18;
+    const rearY = V.rearY;
+
+    // ── BODY (wider than GT3 — RS is visibly flared) ──────────────────
+    mk(new THREE.BoxGeometry(1.76, 0.26, 4.14), paint, 0, -0.14, 0.05);
+    for (const sx of [-1, 1]) mk(new THREE.BoxGeometry(0.05, 0.16, 3.40), dark, sx * 0.934, -0.24, 0.06);
+    mk(new THREE.BoxGeometry(1.60, 0.50, 2.24), paint, 0, 0.10, 0.05);
+
+    // ── FRONT FENDERS ─────────────────────────────────────────────────
+    for (const sx of [-1, 1]) {
+      mk(new THREE.BoxGeometry(0.26, 0.62, 1.30), paint, sx * 0.79, 0.04, -1.28);
+    }
+    // ── REAR FENDERS (even wider haunches with vents) ──────────────────
+    for (const sx of [-1, 1]) {
+      mk(new THREE.BoxGeometry(0.46, 0.72, 1.62), paint, sx * 0.88, 0.08, 1.14);
+      mk(new THREE.BoxGeometry(0.07, 0.44, 1.54), paint, sx * 1.10, 0.20, 1.14);
+      // louvre vents (3 slats)
+      for (let vi = 0; vi < 4; vi++) {
+        mk(new THREE.BoxGeometry(0.06, 0.05, 0.22), dark, sx * 1.08, 0.30 - vi * 0.09, 0.78 + vi * 0.04);
+      }
+    }
+
+    // ── HOOD (carbon NACA duct) ───────────────────────────────────────
+    mk(new THREE.BoxGeometry(1.72, 0.07, 1.80), carbon, 0, 0.36, -1.16, 0.10);
+    // NACA duct (scooped inlet on center hood)
+    mk(new THREE.BoxGeometry(0.26, 0.06, 0.44), dark, 0, 0.37, -1.28, 0.08);
+    mk(new THREE.BoxGeometry(0.18, 0.04, 0.40), carbon, 0, 0.39, -1.26, 0.08);
+    // side hood air extracts
+    for (const sx of [-1, 1]) {
+      mk(new THREE.BoxGeometry(0.22, 0.02, 0.24), dark, sx * 0.50, 0.40, -0.86);
+    }
+
+    // ── ENGINE LID (carbon, louvres) ──────────────────────────────────
+    mk(new THREE.BoxGeometry(1.56, 0.07, 1.04), carbon, 0, rearY + 0.04, 1.24, -0.06);
+    for (let li = 0; li < 5; li++) {
+      mk(new THREE.BoxGeometry(1.40, 0.02, 0.08), dark, 0, rearY + 0.06, 0.76 + li * 0.10);
+    }
+
+    // ── CABIN ─────────────────────────────────────────────────────────
+    for (const sx of [-1, 1]) {
+      mk(new THREE.BoxGeometry(0.12, vRoofY - 0.18, 1.50), paint, sx * 0.660, 0.18 + (vRoofY - 0.18) * 0.5, -0.06);
+    }
+    { const h = vRoofY - 0.16;
+      for (const sx of [-1, 1])
+        mk(new THREE.BoxGeometry(0.10, h, 0.11), paint, sx * 0.59, 0.16 + h * 0.5, -0.56, 0.46);
+    }
+    mk(new THREE.BoxGeometry(1.28, 0.10, 1.44), paint, 0, vRoofY - 0.02, 0.10);
+    mk(new THREE.BoxGeometry(0.96, 0.03, 1.44), paint, 0, vRoofY + 0.03, 0.10);
+    mk(new THREE.BoxGeometry(1.24, 0.06, 0.72), paint, 0, rearY + 0.18, 1.70, -0.30);
+
+    // ── MASSIVE SWAN-NECK WING (RS has endplates with DRS flap) ───────
+    // main plane (wide span)
+    mk(new THREE.BoxGeometry(1.76, 0.036, 0.48), dark, 0, rearY + 0.60, 1.82, -0.06);
+    // DRS flap (slightly angled slot above)
+    mk(new THREE.BoxGeometry(1.76, 0.022, 0.22), dark, 0, rearY + 0.66, 1.68, 0.06);
+    // gurney
+    mk(new THREE.BoxGeometry(1.76, 0.08, 0.02), dark, 0, rearY + 0.66, 1.58);
+    // swan-neck mounts (per side)
+    for (const sx of [-1, 1]) {
+      mk(new THREE.BoxGeometry(0.030, 0.38, 0.07), dark, sx * 0.40, rearY + 0.40, 1.70, 0.24);
+      mk(new THREE.BoxGeometry(0.030, 0.22, 0.10), dark, sx * 0.40, rearY + 0.56, 1.78, -0.08);
+      // large endplates with cutout
+      mk(new THREE.BoxGeometry(0.07, 0.40, 0.52), dark, sx * 0.88, rearY + 0.46, 1.82, -0.06);
+      mk(new THREE.BoxGeometry(0.08, 0.14, 0.14), paint, sx * 0.88, rearY + 0.62, 1.64, 0.10); // upper endplate vent
+    }
+
+    // ── FRONT BUMPER (wide, RS-specific splitter) ─────────────────────
+    mk(new THREE.BoxGeometry(1.72, 0.22, 0.24), paint, 0, 0.14, -2.06);
+    mk(new THREE.BoxGeometry(1.72, 0.30, 0.22), dark, 0, -0.12, -2.08);
+    mk(new THREE.BoxGeometry(0.68, 0.18, 0.06), dark, 0, -0.04, -2.18);
+    for (const sx of [-1, 1]) mk(new THREE.BoxGeometry(0.30, 0.14, 0.06), dark, sx * 0.62, 0.06, -2.18);
+    // RS splitter (very wide, with dive planes)
+    mk(new THREE.BoxGeometry(1.78, 0.03, 0.36), carbon, 0, -0.32, -2.10, -0.06);
+    for (const sx of [-1, 1]) {
+      mk(new THREE.BoxGeometry(0.04, 0.18, 0.28), carbon, sx * 0.90, -0.22, -2.00, 0, 0, sx * 0.08); // dive plane
+    }
+
+    // ── HEADLIGHTS (round, same as GT3) ──────────────────────────────
+    for (const sx of [-1, 1]) {
+      const hGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.05, 22); hGeo.rotateX(Math.PI / 2);
+      mk(hGeo, lightMat, sx * 0.56, 0.20, -2.14);
+      const rGeo = new THREE.TorusGeometry(0.12, 0.015, 8, 22); rGeo.rotateX(Math.PI / 2);
+      mk(rGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xeeddaa, emissiveIntensity: 0.8 }), sx * 0.56, 0.20, -2.12);
+    }
+
+    // ── REAR ─────────────────────────────────────────────────────────
+    mk(new THREE.BoxGeometry(1.70, 0.38, 0.24), paint, 0, -0.02, 2.10);
+    mk(new THREE.BoxGeometry(1.44, 0.10, 0.30), carbon, 0, -0.30, 2.08, -0.16);
+    for (const fx of [-0.52, -0.26, 0, 0.26, 0.52]) {
+      mk(new THREE.BoxGeometry(0.015, 0.08, 0.28), dark, fx, -0.30, 2.08, -0.16);
+    }
+    mk(new THREE.BoxGeometry(1.70, 0.04, 0.04), tailMat, 0, rearY - 0.16, 2.18);
+    for (const sx of [-1, 1]) mk(new THREE.BoxGeometry(0.30, 0.12, 0.04), tailMat, sx * 0.68, rearY - 0.12, 2.18);
+
+    // ── GLASS ─────────────────────────────────────────────────────────
+    { const m = new THREE.Mesh(new THREE.PlaneGeometry(1.22, vRoofY - 0.20), glass);
+      m.position.set(0, (0.22 + vRoofY - 0.06) * 0.5, -0.56); m.rotation.x = 0.48; e.add(m); }
+    { const m = new THREE.Mesh(new THREE.PlaneGeometry(1.18, 0.38), glass);
+      m.position.set(0, rearY + 0.14, 1.20); m.rotation.x = -0.42; e.add(m); }
+    for (const sx of [-1, 1]) {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(1.28, vRoofY - 0.28), glass);
+      m.position.set(sx * 0.734, 0.22 + (vRoofY - 0.28) * 0.5, -0.04); m.rotation.y = sx * Math.PI / 2; e.add(m);
+    }
+
+    for (const sx of [-1, 1]) mk(new THREE.BoxGeometry(0.07, 0.10, 0.20), dark, sx * 0.92, 0.36, -0.60);
+    const pMat = new THREE.MeshStandardMaterial({ color: 0x8a8f96, metalness: 0.9, roughness: 0.3 });
+    const pGeo = new THREE.CylinderGeometry(0.046, 0.050, 0.10, 10); pGeo.rotateX(Math.PI / 2);
+    for (const px of [-0.10, 0.10]) mk(pGeo, pMat, px, -0.22, 2.16);
+
+    this._buildWheels(0.26);
+  }
+
+  // ---------------------------------------------------------------- 911 GT3 R (race car)
+  _buildGT3RExt() {
+    const V = this.spec.visual;
+    const e = this.exterior;
+    const bodyMat = new THREE.MeshPhysicalMaterial({
+      color: V.color, metalness: 0.30, roughness: 0.60, // matte black race livery
+      clearcoat: 0.2, clearcoatRoughness: 0.30, envMapIntensity: 1.2,
+    });
+    const carbon = new THREE.MeshStandardMaterial({ color: 0x0e1014, roughness: 0.22, metalness: 0.42, envMapIntensity: 2.0 });
+    const red = new THREE.MeshStandardMaterial({ color: V.accent, roughness: 0.35, metalness: 0.15 });
+    const dark = new THREE.MeshStandardMaterial({ color: 0x080a0e, roughness: 0.60 });
+    const glass = new THREE.MeshPhysicalMaterial({ color: 0x0c1824, metalness: 0.05, roughness: 0.06, transparent: true, opacity: 0.55, envMapIntensity: 2.6 });
+    const cage = new THREE.MeshStandardMaterial({ color: 0x2a2e38, metalness: 0.80, roughness: 0.25 });
+    const lightMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, emissive: 0xb0c4d8, emissiveIntensity: 0.5, roughness: 0.3 });
+    this._headlightMat = lightMat; // not used in race, but keep mat valid
+    const mk = (geo, mat, x, y, z, rx = 0, ry = 0, rz = 0) => {
+      const m = new THREE.Mesh(geo, mat);
+      m.position.set(x, y, z); m.rotation.set(rx, ry, rz); m.castShadow = true; e.add(m); return m;
+    };
+    const vRoofY = V.roofY + 0.18;
+    const rearY = V.rearY;
+
+    // ── BODY (wider race bodywork) ─────────────────────────────────────
+    mk(new THREE.BoxGeometry(1.78, 0.26, 4.16), bodyMat, 0, -0.14, 0.05);
+    mk(new THREE.BoxGeometry(1.62, 0.50, 2.28), bodyMat, 0, 0.10, 0.05);
+    // red accent stripe down sides
+    for (const sx of [-1, 1]) {
+      mk(new THREE.BoxGeometry(0.015, 0.18, 3.50), red, sx * 0.862, 0.02, 0.04);
+    }
+
+    // ── FRONT FENDERS ─────────────────────────────────────────────────
+    for (const sx of [-1, 1]) {
+      mk(new THREE.BoxGeometry(0.28, 0.64, 1.32), bodyMat, sx * 0.80, 0.04, -1.26);
+      mk(new THREE.BoxGeometry(0.07, 0.46, 1.24), carbon, sx * 1.02, 0.18, -1.26);
+    }
+    // ── REAR FENDERS (massive GT3 race wide body) ──────────────────────
+    for (const sx of [-1, 1]) {
+      mk(new THREE.BoxGeometry(0.46, 0.74, 1.64), bodyMat, sx * 0.89, 0.08, 1.12);
+      mk(new THREE.BoxGeometry(0.08, 0.48, 1.56), carbon, sx * 1.12, 0.22, 1.12);
+      // functional louvre vents
+      for (let vi = 0; vi < 5; vi++) {
+        mk(new THREE.BoxGeometry(0.06, 0.04, 0.20), dark, sx * 1.10, 0.38 - vi * 0.08, 0.74 + vi * 0.06);
+      }
+    }
+
+    // ── FRONT LID (flat carbon) ────────────────────────────────────────
+    mk(new THREE.BoxGeometry(1.72, 0.07, 1.80), carbon, 0, 0.36, -1.16, 0.10);
+    // large center duct
+    mk(new THREE.BoxGeometry(0.50, 0.06, 0.52), dark, 0, 0.37, -1.34, 0.10);
+    mk(new THREE.BoxGeometry(0.40, 0.04, 0.46), carbon, 0, 0.39, -1.32, 0.10);
+
+    // ── ENGINE LID (carbon, louvres) ──────────────────────────────────
+    mk(new THREE.BoxGeometry(1.58, 0.07, 1.04), carbon, 0, rearY + 0.04, 1.24, -0.06);
+    for (let li = 0; li < 6; li++) {
+      mk(new THREE.BoxGeometry(1.42, 0.02, 0.08), dark, 0, rearY + 0.07, 0.72 + li * 0.10);
+    }
+
+    // ── CABIN ─────────────────────────────────────────────────────────
+    for (const sx of [-1, 1]) {
+      mk(new THREE.BoxGeometry(0.12, vRoofY - 0.18, 1.50), bodyMat, sx * 0.660, 0.18 + (vRoofY - 0.18) * 0.5, -0.06);
+      // fixed side window (no opening glass — polycarbonate panel)
+      const wm = new THREE.Mesh(new THREE.PlaneGeometry(1.24, vRoofY - 0.26), glass);
+      wm.position.set(sx * 0.730, 0.22 + (vRoofY - 0.26) * 0.5, -0.04); wm.rotation.y = sx * Math.PI / 2; e.add(wm);
+      // window net (approximated as dark mesh strip)
+      mk(new THREE.BoxGeometry(0.015, vRoofY - 0.30, 0.60), new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.9 }), sx * 0.742, 0.26 + (vRoofY - 0.30) * 0.5, -0.46);
+    }
+    { const h = vRoofY - 0.16;
+      for (const sx of [-1, 1])
+        mk(new THREE.BoxGeometry(0.10, h, 0.11), carbon, sx * 0.59, 0.16 + h * 0.5, -0.56, 0.46);
+    }
+    mk(new THREE.BoxGeometry(1.28, 0.10, 1.44), carbon, 0, vRoofY - 0.02, 0.10);
+    mk(new THREE.BoxGeometry(0.96, 0.03, 1.44), bodyMat, 0, vRoofY + 0.03, 0.10);
+    mk(new THREE.BoxGeometry(1.24, 0.06, 0.72), bodyMat, 0, rearY + 0.18, 1.70, -0.30);
+
+    // ── TALL TUBE-FRAME WING (GT3 R signature) ───────────────────────
+    // main upper plane
+    mk(new THREE.BoxGeometry(1.80, 0.040, 0.52), carbon, 0, rearY + 0.74, 1.76, -0.04);
+    // lower flap (DRS-style second element)
+    mk(new THREE.BoxGeometry(1.80, 0.026, 0.24), carbon, 0, rearY + 0.80, 1.56, 0.08);
+    // gurney flap
+    mk(new THREE.BoxGeometry(1.80, 0.10, 0.022), dark, 0, rearY + 0.80, 1.52);
+    // 4 vertical tube pylons (two per side)
+    for (const sx of [-1, 1]) {
+      for (const dz of [-0.06, 0.06]) {
+        mk(new THREE.BoxGeometry(0.022, 0.58, 0.022), cage, sx * 0.40 + dz * sx, rearY + 0.44, 1.68 + dz, 0, 0, sx * 0.04);
+      }
+      // endplate (tall, with cutout vents)
+      mk(new THREE.BoxGeometry(0.07, 0.48, 0.56), carbon, sx * 0.90, rearY + 0.54, 1.76, -0.04);
+      // endplate vent slats
+      for (let vi = 0; vi < 3; vi++) {
+        mk(new THREE.BoxGeometry(0.08, 0.04, 0.14), dark, sx * 0.90, rearY + 0.72 - vi * 0.12, 1.66);
+      }
+    }
+    // cross-brace between pylons
+    mk(new THREE.BoxGeometry(0.96, 0.022, 0.022), cage, 0, rearY + 0.32, 1.68);
+
+    // ── RACING SPLITTER (aggressive front aero) ───────────────────────
+    mk(new THREE.BoxGeometry(1.72, 0.22, 0.24), bodyMat, 0, 0.14, -2.06);
+    mk(new THREE.BoxGeometry(1.72, 0.28, 0.22), dark, 0, -0.10, -2.08);
+    // large center aero duct
+    mk(new THREE.BoxGeometry(0.72, 0.18, 0.07), dark, 0, -0.04, -2.17);
+    // wide flat splitter
+    mk(new THREE.BoxGeometry(1.84, 0.03, 0.44), carbon, 0, -0.30, -2.06, -0.05);
+    // dive planes (canards)
+    for (const sx of [-1, 1]) {
+      mk(new THREE.BoxGeometry(0.04, 0.22, 0.34), carbon, sx * 0.94, -0.20, -1.98, 0, 0, sx * 0.10);
+      mk(new THREE.BoxGeometry(0.36, 0.02, 0.24), carbon, sx * 0.78, -0.32, -2.08, 0.04, 0, sx * 0.06);
+    }
+    // front duct fences
+    for (const sx of [-1, 1]) mk(new THREE.BoxGeometry(0.015, 0.10, 0.40), dark, sx * 0.36, -0.28, -2.10);
+
+    // ── RACE HEADLIGHTS (LEDs only) ───────────────────────────────────
+    for (const sx of [-1, 1]) {
+      mk(new THREE.BoxGeometry(0.36, 0.06, 0.05), lightMat, sx * 0.58, 0.22, -2.16);
+      // corner marker
+      mk(new THREE.BoxGeometry(0.06, 0.08, 0.05), new THREE.MeshStandardMaterial({ color: 0xff8800, emissive: 0xff6600, emissiveIntensity: 0.8 }), sx * 0.82, 0.20, -2.14);
+    }
+
+    // ── REAR BODYWORK ─────────────────────────────────────────────────
+    mk(new THREE.BoxGeometry(1.72, 0.36, 0.24), bodyMat, 0, -0.02, 2.10);
+    mk(new THREE.BoxGeometry(1.48, 0.10, 0.32), carbon, 0, -0.30, 2.06, -0.14);
+    for (const fx of [-0.54, -0.27, 0, 0.27, 0.54]) {
+      mk(new THREE.BoxGeometry(0.015, 0.08, 0.30), dark, fx, -0.30, 2.06, -0.14);
+    }
+    // race taillights (LED)
+    mk(new THREE.BoxGeometry(1.72, 0.04, 0.04), new THREE.MeshStandardMaterial({ color: 0x880010, emissive: 0xdd0014, emissiveIntensity: 1.0 }), 0, rearY - 0.14, 2.18);
+
+    // ── WINDSHIELD + REAR ─────────────────────────────────────────────
+    { const m = new THREE.Mesh(new THREE.PlaneGeometry(1.22, vRoofY - 0.20), glass);
+      m.position.set(0, (0.22 + vRoofY - 0.06) * 0.5, -0.56); m.rotation.x = 0.48; e.add(m); }
+    { const m = new THREE.Mesh(new THREE.PlaneGeometry(1.18, 0.34), glass);
+      m.position.set(0, rearY + 0.14, 1.20); m.rotation.x = -0.40; e.add(m); }
+
+    // ── EXHAUST (side-exit) ────────────────────────────────────────────
+    const pMat = new THREE.MeshStandardMaterial({ color: 0x6a6f76, metalness: 0.92, roughness: 0.28 });
+    const pGeo = new THREE.CylinderGeometry(0.055, 0.058, 0.12, 12); pGeo.rotateX(Math.PI / 2);
+    for (const sx of [-1, 1]) mk(pGeo, pMat, sx * 0.56, -0.22, 1.88);
+
+    this._buildWheels(0.28); // slightly wider slick tire
   }
 
   // four spinning wheel groups (positioned each frame in update)
@@ -869,7 +1418,7 @@ export class CarVisual {
     for (let i = 0; i < 4; i++) {
       const w = vehicle.wheels[i];
       const g = this.wheelMeshes[i];
-      g.position.set(w.x, w.attachY - w.restLen + w.comp - 0.12, w.z);
+      g.position.set(w.x, w.attachY - w.restLen + w.comp, w.z);
       g.rotation.y = -w.steer;
       g.userData.spin.rotation.x = -w.spinAngle;
     }
