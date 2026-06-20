@@ -115,6 +115,7 @@ export class CarVisual {
   _buildExterior() {
     const V = this.spec.visual;
     const roofY = V.roofY, rearY = V.rearY;
+    const vRoofY = roofY + 0.38;  // visual cabin height (taller than physics roof)
     const e = this.exterior;
 
     const paint = new THREE.MeshPhysicalMaterial({
@@ -153,16 +154,17 @@ export class CarVisual {
 
     // ── CABIN SIDE WALLS (A-pillar → C-pillar, thick enough to read) ──
     for (const sx of [-1, 1]) {
-      mk(new THREE.BoxGeometry(0.13, roofY - 0.22, 1.50), paint,
-        sx * 0.665, 0.18 + (roofY - 0.22) * 0.5, -0.14);
+      mk(new THREE.BoxGeometry(0.14, vRoofY - 0.20, 1.52), paint,
+        sx * 0.665, 0.18 + (vRoofY - 0.20) * 0.5, -0.13);
     }
-    // A-pillars (leaning forward)
-    for (const sx of [-1, 1]) {
-      mk(new THREE.BoxGeometry(0.10, 0.52, 0.12), paint, sx * 0.60, roofY - 0.30, -0.68, 0.55);
+    // A-pillars (full cabin height, lean forward)
+    { const cabH = vRoofY - 0.16;
+      for (const sx of [-1, 1])
+        mk(new THREE.BoxGeometry(0.11, cabH, 0.13), paint, sx * 0.60, 0.16 + cabH * 0.5, -0.60, 0.50);
     }
 
     // ── ROOF ──────────────────────────────────────────────────────────
-    mk(new THREE.BoxGeometry(1.34, 0.12, 1.42), paint, 0, roofY - 0.04, 0.13);
+    mk(new THREE.BoxGeometry(1.34, 0.13, 1.44), paint, 0, vRoofY - 0.04, 0.13);
 
     // ── REAR FASTBACK SLOPE ───────────────────────────────────────────
     mk(new THREE.BoxGeometry(1.30, 0.06, 0.74), paint, 0, rearY + 0.12, 1.62, -0.30);
@@ -182,15 +184,15 @@ export class CarVisual {
 
     // ── GLASS PANELS ──────────────────────────────────────────────────
     // Windshield
-    { const m = new THREE.Mesh(new THREE.PlaneGeometry(1.30, 0.70), glassMat);
-      m.position.set(0, roofY - 0.23, -0.64); m.rotation.x = 0.56; e.add(m); }
+    { const m = new THREE.Mesh(new THREE.PlaneGeometry(1.28, vRoofY - 0.22), glassMat);
+      m.position.set(0, (0.24 + vRoofY - 0.08) * 0.5, -0.60); m.rotation.x = 0.52; e.add(m); }
     // Rear window
     { const m = new THREE.Mesh(new THREE.PlaneGeometry(1.22, 0.44), glassMat);
       m.position.set(0, rearY + 0.12, 1.22); m.rotation.x = -0.46; e.add(m); }
     // Side windows
     for (const sx of [-1, 1]) {
-      const m = new THREE.Mesh(new THREE.PlaneGeometry(1.24, 0.38), glassMat);
-      m.position.set(sx * 0.736, roofY - 0.22, -0.12); m.rotation.y = sx * Math.PI / 2; e.add(m);
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(1.26, vRoofY - 0.30), glassMat);
+      m.position.set(sx * 0.736, 0.24 + (vRoofY - 0.30) * 0.5, -0.12); m.rotation.y = sx * Math.PI / 2; e.add(m);
     }
 
     // ── LIGHTS ────────────────────────────────────────────────────────
@@ -222,7 +224,7 @@ export class CarVisual {
     }
 
     // ── SHARK FIN ─────────────────────────────────────────────────────
-    mk(new THREE.BoxGeometry(0.035, 0.055, 0.16), dark, 0, roofY + 0.085, 0.85);
+    mk(new THREE.BoxGeometry(0.035, 0.055, 0.16), dark, 0, vRoofY + 0.085, 0.85);
 
     // ── WING / SPOILER ────────────────────────────────────────────────
     if (V.wing === 'gt') {

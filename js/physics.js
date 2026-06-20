@@ -291,12 +291,12 @@ export class Vehicle {
       w.comp = Math.min(comp, w.maxCompress + 0.08);
       // clamp the damper input: a surface kink crossed at speed must read as
       // a bump, not as a 20 m/s compression spike that launches the car
-      const compRate = THREE.MathUtils.clamp((w.comp - w.prevComp) / dt, -4, 4);
+      const compRate = THREE.MathUtils.clamp((w.comp - w.prevComp) / dt, -6, 4);
       w.rate = compRate;
 
       // spring + bottom-out + damper + ARB
       let fSus = w.k * Math.max(0, w.comp);
-      if (w.comp > w.maxCompress) fSus += (w.comp - w.maxCompress) * w.k * 2;
+      if (w.comp > w.maxCompress) fSus += (w.comp - w.maxCompress) * w.k * 0.15;
       fSus += compRate * (compRate > 0 ? w.cBump : w.cReb);
       const opp = this.wheels[wi ^ 1];                  // FL<->FR, RL<->RR
       fSus += (w.front ? this.arbF : this.arbR) * (w.comp - opp.comp);
@@ -433,6 +433,10 @@ export class Vehicle {
     if (wMag > 25) wB.multiplyScalar(25 / wMag);
     this.angVel.copy(wB.applyQuaternion(this.quat));
 
+    // kill upward velocity when wheels are grounded — removes bounce
+    if (contactCount >= 2 && this.vel.y > 0)
+      this.vel.y *= Math.max(0, 1 - 9.0 * dt);
+
     const vMag = this.vel.length();
     if (vMag > 130) this.vel.multiplyScalar(130 / vMag);   // 468 km/h sanity cap
     this.pos.addScaledVector(this.vel, dt);
@@ -462,12 +466,18 @@ export class Vehicle {
       this.trackS = tq.s; this.trackD = tq.d;
       this.onTrack = tq.surf !== SURF.GRASS;
 
-      // body floor: prevent car body from clipping through terrain
-      const floorY = tq.y + this.comH * 0.85;
-      if (this.pos.y < floorY) {
-        this.pos.y = floorY;
-        if (this.vel.y < 0) this.vel.y = 0;
-      }
+      // body floor: check CoM + front + rear to prevent terrain clipping on slopes
+      const _bfl = (q2) => {
+        if (q2 && this.pos.y < q2.y + 0.26) {
+          this.pos.y = q2.y + 0.26;
+          if (this.vel.y < 0) this.vel.y = 0;
+        }
+      };
+      _bfl(tq);
+      _bfl(this.track.query(this.pos.x + bodyFwd.x * 2.2, this.pos.z + bodyFwd.z * 2.2,
+           this._bqF || (this._bqF = {})));
+      _bfl(this.track.query(this.pos.x - bodyFwd.x * 2.2, this.pos.z - bodyFwd.z * 2.2,
+           this._bqR || (this._bqR = {})));
     }
   }
 
