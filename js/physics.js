@@ -296,7 +296,7 @@ export class Vehicle {
 
       // spring + bottom-out + damper + ARB
       let fSus = w.k * Math.max(0, w.comp);
-      if (w.comp > w.maxCompress) fSus += (w.comp - w.maxCompress) * w.k * 6;
+      if (w.comp > w.maxCompress) fSus += (w.comp - w.maxCompress) * w.k * 2;
       fSus += compRate * (compRate > 0 ? w.cBump : w.cReb);
       const opp = this.wheels[wi ^ 1];                  // FL<->FR, RL<->RR
       fSus += (w.front ? this.arbF : this.arbR) * (w.comp - opp.comp);
@@ -425,8 +425,8 @@ export class Vehicle {
     const dwy = (tB.y - (wB.z * wB.x * (I.x - I.z))) / I.y;
     const dwz = (tB.z - (wB.x * wB.y * (I.y - I.x))) / I.z;
     wB.x += dwx * dt; wB.y += dwy * dt; wB.z += dwz * dt;
-    // mild angular damping for numeric robustness
-    wB.multiplyScalar(1 - 0.06 * dt);
+    // angular damping: damps tumbling and flips
+    wB.multiplyScalar(1 - 0.18 * dt);
     // hard cap: the explicit gyroscopic term diverges past ~30 rad/s
     // (crash tumbles) — 25 rad/s = 4 rev/s is already a violent flip
     const wMag = wB.length();
@@ -461,6 +461,13 @@ export class Vehicle {
       this._prevS = tq.s;
       this.trackS = tq.s; this.trackD = tq.d;
       this.onTrack = tq.surf !== SURF.GRASS;
+
+      // body floor: prevent car body from clipping through terrain
+      const floorY = tq.y + this.comH * 0.85;
+      if (this.pos.y < floorY) {
+        this.pos.y = floorY;
+        if (this.vel.y < 0) this.vel.y = 0;
+      }
     }
   }
 

@@ -322,9 +322,10 @@ updateCamBtn();
 // reverse handling: holding brake at standstill engages reverse
 function autoReverse() {
   if (!vehicle.auto) return;
-  if (vehicle.ctrl.brake > 0.4 && Math.abs(vehicle.speed) < 0.6 && vehicle.gear === 1) {
+  // use raw input values — vehicle.ctrl is remapped when in reverse so can't use it
+  if (input.brake > 0.3 && Math.abs(vehicle.speed) < 2.0 && vehicle.gear === 1) {
     vehicle.gear = -1;
-  } else if (vehicle.gear === -1 && vehicle.ctrl.throttle > 0.3 && vehicle.speed > -0.6) {
+  } else if (vehicle.gear === -1 && input.throttle > 0.3 && vehicle.speed > -1.0) {
     vehicle.gear = 1;
   }
 }
@@ -350,31 +351,60 @@ const lookEuler = new THREE.Euler(0, 0, 0, 'YXZ');
 let headLean = new THREE.Vector3();
 const chasePos = new THREE.Vector3();
 let chaseInit = false;
+let _camYaw = 0;          // chase-camera yaw offset for look-around
+let _dragStartX = null;
+let _dragStartYaw = 0;
+let _flipTime = 0;        // seconds the car has been upside-down
+
+// touch/mouse drag to orbit the chase camera
+{
+  const cv = renderer.domElement;
+  cv.addEventListener('pointerdown', e => {
+    if (camMode !== 2) return;
+    _dragStartX = e.clientX; _dragStartYaw = _camYaw;
+    cv.setPointerCapture(e.pointerId);
+  });
+  cv.addEventListener('pointermove', e => {
+    if (camMode !== 2 || _dragStartX === null) return;
+    const dx = (e.clientX - _dragStartX) / window.innerWidth;
+    _camYaw = _dragStartYaw - dx * Math.PI * 2;
+  });
+  const endDrag = () => { _dragStartX = null; };
+  cv.addEventListener('pointerup', endDrag);
+  cv.addEventListener('pointercancel', endDrag);
+}
 
 function updateCamera(dtVis) {
   const q = vehicle.quat;
+
+  // auto-recovery: reset car if upside-down for > 3 s
+  const bodyUpY = new THREE.Vector3(0, 1, 0).applyQuaternion(q).y;
+  if (bodyUpY < -0.3 && Math.abs(vehicle.speed) < 3) {
+    _flipTime += dtVis;
+    if (_flipTime > 3.0) { recoverToTrack(); _flipTime = 0; hud.flash('Auto-reset: car flipped'); }
+  } else { _flipTime = 0; }
+
   if (camMode === 2) {
-    // chase (3rd-person): cinematic spring-damped follow
-    // Higher + further back for a dramatic wide view of the whole car
-    const speedFactor = Math.min(1, Math.abs(vehicle.speed) / 40);
-    const camDist = 8.5 + speedFactor * 1.2;   // pull back slightly at speed
-    const camH    = 2.4 + speedFactor * 0.3;
-    const behind = new THREE.Vector3(0, camH, camDist).applyQuaternion(q).add(vehicle.pos);
+    // chase (3rd-person): fixed distance, look-around via drag
+    const camDist = 8.0;
+    const camH    = 2.4;
+    // drift yaw back toward 0 when not dragging
+    if (_dragStartX === null) _camYaw *= Math.max(0, 1 - dtVis * 1.8);
+    const sinY = Math.sin(_camYaw), cosY = Math.cos(_camYaw);
+    const behind = new THREE.Vector3(camDist * sinY, camH, camDist * cosY)
+      .applyQuaternion(q).add(vehicle.pos);
     if (!chaseInit || chasePos.distanceTo(behind) > 40) { chasePos.copy(behind); chaseInit = true; }
-    // responsive but not rubbery: faster when close, slower when far
     const lerpK = Math.min(1, dtVis * 5.5);
     chasePos.lerp(behind, lerpK);
-    // keep above visual ground (incl. hillsides)
     const gq = track.query(chasePos.x, chasePos.z, {});
     if (gq) {
       const gy = groundHeightAt(track, gq, chasePos.x, chasePos.z);
       if (chasePos.y < gy + 0.8) chasePos.y = gy + 0.8;
     }
     camera.position.copy(chasePos);
-    // look slightly ahead of the car and slightly up so road fills the frame
-    const look = new THREE.Vector3(0, 0.6, -2.5).applyQuaternion(q).add(vehicle.pos);
+    const look = vehicle.pos.clone().add(new THREE.Vector3(0, 0.5, 0));
     camera.lookAt(look);
-    camera.fov = 72 + speedFactor * 6;   // subtle FOV stretch at speed
+    camera.fov = 72;
   } else {
     const eyeLocal = camMode === 0 ? carVis.eyeLocal : new THREE.Vector3(0, 0.55, -1.0);
     // g-force head motion (body frame)

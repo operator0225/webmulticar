@@ -151,14 +151,18 @@ export class CarVisual {
     // ── HOOD (sloped from windshield to nose) ─────────────────────────
     mk(new THREE.BoxGeometry(1.78, 0.05, 1.90), paint, 0, 0.38, -1.18, 0.09);
 
-    // ── CABIN SIDE WALLS ──────────────────────────────────────────────
+    // ── CABIN SIDE WALLS (A-pillar → C-pillar, thick enough to read) ──
     for (const sx of [-1, 1]) {
-      mk(new THREE.BoxGeometry(0.07, roofY - 0.24, 1.44), paint,
-        sx * 0.70, 0.20 + (roofY - 0.24) * 0.5, -0.16);
+      mk(new THREE.BoxGeometry(0.13, roofY - 0.22, 1.50), paint,
+        sx * 0.665, 0.18 + (roofY - 0.22) * 0.5, -0.14);
+    }
+    // A-pillars (leaning forward)
+    for (const sx of [-1, 1]) {
+      mk(new THREE.BoxGeometry(0.10, 0.52, 0.12), paint, sx * 0.60, roofY - 0.30, -0.68, 0.55);
     }
 
     // ── ROOF ──────────────────────────────────────────────────────────
-    mk(new THREE.BoxGeometry(1.34, 0.09, 1.38), paint, 0, roofY - 0.03, 0.14);
+    mk(new THREE.BoxGeometry(1.34, 0.12, 1.42), paint, 0, roofY - 0.04, 0.13);
 
     // ── REAR FASTBACK SLOPE ───────────────────────────────────────────
     mk(new THREE.BoxGeometry(1.30, 0.06, 0.74), paint, 0, rearY + 0.12, 1.62, -0.30);
@@ -205,16 +209,6 @@ export class CarVisual {
         sx * 0.845, -0.245, 0);
     }
     mk(new THREE.BoxGeometry(1.54, 0.07, 0.04), tailMat, 0, rearY - 0.20, 2.16);
-
-    // ── WHEEL ARCHES ──────────────────────────────────────────────────
-    const W = this.spec.wheels;
-    const archGeo = new THREE.TorusGeometry(W.radius + 0.09, 0.045, 6, 10, Math.PI);
-    for (const [sx, wz] of [[-1, W.fz], [1, W.fz], [-1, W.rz], [1, W.rz]]) {
-      const arch = new THREE.Mesh(archGeo, dark);
-      arch.position.set(sx * (W.htF + 0.10), -0.06, wz);
-      arch.rotation.y = Math.PI / 2;
-      e.add(arch);
-    }
 
     // ── ROCKER PANELS ─────────────────────────────────────────────────
     for (const sx of [-1, 1]) mk(new THREE.BoxGeometry(0.07, 0.09, 2.35), dark, sx * 0.80, -0.315, 0.05);
@@ -873,7 +867,7 @@ export class CarVisual {
     for (let i = 0; i < 4; i++) {
       const w = vehicle.wheels[i];
       const g = this.wheelMeshes[i];
-      g.position.set(w.x, w.attachY - w.restLen + w.comp, w.z);
+      g.position.set(w.x, w.attachY - w.restLen + w.comp - 0.12, w.z);
       g.rotation.y = -w.steer;
       g.userData.spin.rotation.x = -w.spinAngle;
     }
