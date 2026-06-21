@@ -553,6 +553,16 @@ function launchMenu() {
   });
 }
 
+// Go fullscreen on first user touch — browser requires a user gesture
+{
+  const _autoFs = () => {
+    document.removeEventListener('pointerdown', _autoFs, true);
+    try { document.documentElement.requestFullscreen({ navigationUI: 'hide' }); } catch(e) {}
+    try { screen.orientation.lock('landscape'); } catch(e) {}
+  };
+  document.addEventListener('pointerdown', _autoFs, true);
+}
+
 // boot: skip the menu if we just reloaded from a track pick, else show it
 if (sessionStorage.getItem('ns-go')) {
   sessionStorage.removeItem('ns-go');
