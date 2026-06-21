@@ -61,7 +61,7 @@ export class CarBuilder {
         <button id="bl-save">SAVE &amp; DRIVE</button>
       </div>
       <div id="bl-hint">Select a material below, then tap the floor to place a block.</div>
-      <canvas id="bl-canvas"></canvas>
+      <div id="bl-viewport"><canvas id="bl-canvas"></canvas></div>
       <div id="bl-bar">
         ${MAT_DEFS.map(m => `<button class="bl-mat" data-mat="${m.id}"
             style="background:#${m.color.toString(16).padStart(6,'0')}">${m.label}</button>`).join('')}
@@ -123,6 +123,8 @@ export class CarBuilder {
     this._bindEvents();
     this._load();
 
+    // Observe the wrapper div (regular divs flex-size reliably; canvas replaced-elements don't)
+    this._viewport = this._el.querySelector('#bl-viewport');
     this._resizeObs = new ResizeObserver(entries => {
       for (const e of entries) {
         const w = Math.round(e.contentRect.width);
@@ -134,9 +136,7 @@ export class CarBuilder {
         }
       }
     });
-    this._resizeObs.observe(cv);
-    // rAF fallback for the very first frame when contentRect may not fire yet
-    requestAnimationFrame(() => this._resize());
+    this._resizeObs.observe(this._viewport);
 
     this._running = true;
     this._animate();
@@ -525,7 +525,8 @@ export class CarBuilder {
   }
 
   _resize() {
-    const w = this._canvas.clientWidth, h = this._canvas.clientHeight;
+    const w = this._viewport ? this._viewport.clientWidth  : this._canvas.clientWidth;
+    const h = this._viewport ? this._viewport.clientHeight : this._canvas.clientHeight;
     if (!w || !h) return;
     this._renderer.setSize(w, h, false);
     this._camera.aspect = w / h;
