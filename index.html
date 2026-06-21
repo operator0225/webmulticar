@@ -178,34 +178,43 @@
 
   /* ---------- car builder ---------- */
   #builder { position: fixed; inset: 0; z-index: 90; display: flex; flex-direction: column;
-    background: #0d1520; pointer-events: auto; }
-  #bl-top { display: flex; align-items: center; padding: 10px 14px;
-    background: rgba(5,10,18,0.96); border-bottom: 1px solid rgba(255,255,255,0.1);
-    gap: 10px; flex-shrink: 0; }
-  #bl-back { background: rgba(255,255,255,0.08); color: #fff;
-    border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 8px 16px;
-    font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; }
-  #bl-back:active { background: rgba(255,255,255,0.15); }
-  #bl-title { flex: 1; text-align: center; color: #ffd24a; font-size: 15px;
-    font-weight: 800; letter-spacing: 3px; }
-  #bl-save { background: rgba(50,160,90,0.25); color: #7ce8a4;
-    border: 1px solid rgba(120,255,160,0.35); border-radius: 8px; padding: 8px 16px;
-    font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; }
-  #bl-save:active { background: rgba(50,160,90,0.45); }
-  #bl-hint { text-align: center; color: #8aa0b6; font-size: 12px; padding: 4px 14px;
-    min-height: 22px; letter-spacing: 0.5px; flex-shrink: 0; }
-  #bl-canvas { flex: 1; width: 100%; display: block; touch-action: none; }
-  #bl-bar { display: flex; gap: 7px; padding: 10px 12px;
-    background: rgba(5,10,18,0.96); border-top: 1px solid rgba(255,255,255,0.1);
+    background: #7ecce8; pointer-events: auto; overflow: hidden; }
+  #bl-top { display: flex; align-items: center;
+    padding: max(8px, env(safe-area-inset-top)) 12px 8px;
+    background: rgba(4,16,36,0.82); border-bottom: 1px solid rgba(255,255,255,0.12);
+    gap: 8px; flex-shrink: 0; }
+  #bl-back { background: rgba(255,255,255,0.10); color: #fff;
+    border: 1px solid rgba(255,255,255,0.22); border-radius: 8px; padding: 7px 13px;
+    font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap; }
+  #bl-back:active { background: rgba(255,255,255,0.20); }
+  #bl-title { flex: 1; text-align: center; color: #ffd24a; font-size: 14px;
+    font-weight: 800; letter-spacing: 2px; }
+  #bl-save { background: rgba(40,130,70,0.45); color: #7ce8a4;
+    border: 1px solid rgba(100,240,140,0.4); border-radius: 8px; padding: 7px 12px;
+    font-size: 12px; font-weight: 800; cursor: pointer; font-family: inherit;
+    letter-spacing: 1px; white-space: nowrap; }
+  #bl-save:active { background: rgba(40,130,70,0.70); }
+  #bl-hint { text-align: center; color: rgba(4,16,36,0.75); font-size: 11px;
+    padding: 3px 12px; min-height: 20px; letter-spacing: 0.3px;
+    font-weight: 600; flex-shrink: 0; }
+  #bl-canvas { flex: 1; min-height: 0; width: 100%; display: block; touch-action: none; }
+  #bl-bar { display: flex; align-items: center; gap: 6px;
+    padding: 8px 10px max(8px, env(safe-area-inset-bottom));
+    background: rgba(4,16,36,0.82); border-top: 1px solid rgba(255,255,255,0.12);
     overflow-x: auto; flex-shrink: 0; -webkit-overflow-scrolling: touch;
-    scrollbar-width: none; }
+    scrollbar-width: none; min-height: 52px; }
   #bl-bar::-webkit-scrollbar { display: none; }
-  .bl-mat { min-width: 64px; padding: 10px 8px; border: 1.5px solid rgba(255,255,255,0.2);
-    border-radius: 9px; color: #fff; font-size: 11px; font-weight: 800;
-    letter-spacing: 1px; cursor: pointer; font-family: inherit; flex-shrink: 0;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
-  .bl-mat:active { filter: brightness(1.2); }
-  .bl-mat.active { border-color: #ffd24a; box-shadow: 0 0 0 1px #ffd24a; }
+  .bl-mat { min-width: 58px; height: 38px; padding: 0 8px;
+    border: 1.5px solid rgba(255,255,255,0.22); border-radius: 8px; color: #fff;
+    font-size: 10px; font-weight: 800; letter-spacing: 1px; cursor: pointer;
+    font-family: inherit; flex-shrink: 0; text-shadow: 0 1px 3px rgba(0,0,0,0.9); }
+  .bl-mat:active { filter: brightness(1.25); }
+  .bl-mat.active { border-color: #ffd24a !important; box-shadow: 0 0 0 1px #ffd24a; }
+  .bl-sep { width: 1px; height: 30px; background: rgba(255,255,255,0.2); flex-shrink: 0; margin: 0 2px; }
+  #bl-mirror { background: rgba(40,100,200,0.55); }
+  #bl-mirror.active { background: rgba(60,140,255,0.7); }
+  #bl-delete { background: rgba(160,30,30,0.65); }
+  #bl-delete.active { background: rgba(220,50,50,0.80); }
 
   #tap-start { position: fixed; inset: 0; z-index: 99; background: rgba(4,9,17,0.94);
     display: flex; align-items: center; justify-content: center; color: #fff;
@@ -237,7 +246,7 @@
 <!-- Cloudflare Web Analytics -->
 <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "5f92ae19fb414d8e985699513444fda5"}'></script>
 <!-- End Cloudflare Web Analytics -->
-  <script type="module" crossorigin src="./assets/main-BkW7_JI1.js"></script>
+  <script type="module" crossorigin src="./assets/main-CMygW6AS.js"></script>
 </head>
 <body>
 <div id="app"></div>
