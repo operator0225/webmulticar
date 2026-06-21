@@ -699,12 +699,7 @@ export class CarBuilder {
       this._loadBlocks(this._editData.blocks);
       return;
     }
-    // New car mode: restore from draft if available
-    try {
-      const raw = localStorage.getItem('ns-builder-draft');
-      const parsed = raw ? JSON.parse(raw) : null;
-      if (parsed?.length) { this._loadBlocks(parsed); return; }
-    } catch {}
+    // New car: always start with the default skeleton (never restore a previous draft)
     this._addDefaultSkeleton();
   }
 

@@ -807,6 +807,7 @@ export class CarVisual {
       }),
       carbon: new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.18, metalness: 0.55 }),
     };
+    let bMinX=Infinity, bMaxX=-Infinity, bMinZ=Infinity, bMaxZ=-Infinity, bMinY=Infinity;
     for (const b of blocks) {
       if (b.matId === 'wheel') continue; // physics wheels handle geometry + spinning
       const mat = mats[b.matId] || mats.body;
@@ -817,6 +818,21 @@ export class CarVisual {
       mesh.position.set(b.pos[0], b.pos[1] - comH, b.pos[2]);
       mesh.castShadow = true;
       e.add(mesh);
+      // accumulate bounding box for floor pan
+      const px = b.pos[0], py = b.pos[1] - comH, pz = b.pos[2];
+      const hx = b.size[0]/2, hy = b.size[1]/2, hz = b.size[2]/2;
+      bMinX = Math.min(bMinX, px-hx); bMaxX = Math.max(bMaxX, px+hx);
+      bMinZ = Math.min(bMinZ, pz-hz); bMaxZ = Math.max(bMaxZ, pz+hz);
+      bMinY = Math.min(bMinY, py-hy);
+    }
+    // Chassis floor panel visible from chase / third-person view
+    if (isFinite(bMinX)) {
+      const panMat = new THREE.MeshStandardMaterial({ color: 0x1a1c20, roughness: 0.8, metalness: 0.3 });
+      const pan = new THREE.Mesh(
+        new THREE.BoxGeometry(bMaxX-bMinX+0.06, 0.05, bMaxZ-bMinZ+0.06), panMat);
+      pan.position.set((bMinX+bMaxX)/2, bMinY-0.025, (bMinZ+bMaxZ)/2);
+      pan.castShadow = true;
+      e.add(pan);
     }
     this._buildWheels(0.24);
     this._headlightMat = null;
@@ -1317,6 +1333,14 @@ export class CarVisual {
     const shelf = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.05, 0.5), darker);
     shelf.position.set(0, 0.55, 0.95);
     cp.add(shelf);
+
+    // custom car: add a cockpit floor so first-person view isn't see-through
+    if (this.type === 'custom') {
+      const carpetMat = new THREE.MeshStandardMaterial({ color: 0x111315, roughness: 0.95 });
+      const carpet = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.05, 3.6), carpetMat);
+      carpet.position.set(0, -0.12, 0.0);
+      cp.add(carpet);
+    }
     }
 
     // rear-view mirror (the road car shows a center mirror; open cars don't,
