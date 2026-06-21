@@ -81,8 +81,8 @@ export class CarBuilder {
     this._renderer.shadowMap.enabled = true;
 
     this._scene = new THREE.Scene();
-    this._scene.background = new THREE.Color(0x7ecce8);
-    this._scene.fog = new THREE.FogExp2(0x7ecce8, 0.04);
+    this._scene.background = new THREE.Color(0x000000);
+    this._scene.fog = new THREE.FogExp2(0x000000, 0.04);
 
     this._camera = new THREE.PerspectiveCamera(50, 1, 0.05, 80);
     this._updateCam();
@@ -102,7 +102,7 @@ export class CarBuilder {
     // Floor
     const floor = new THREE.Mesh(
       new THREE.PlaneGeometry(16, 16),
-      new THREE.MeshStandardMaterial({ color: 0x9dd9ec, roughness: 0.92, metalness: 0 })
+      new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85, metalness: 0 })
     );
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -0.001;
@@ -112,7 +112,7 @@ export class CarBuilder {
     this._scene.add(floor);
 
     // Grid
-    const grid = new THREE.GridHelper(16, 32, 0x4aacc2, 0x3a9cb2);
+    const grid = new THREE.GridHelper(16, 32, 0xaaaaaa, 0xcccccc);
     grid.position.y = 0.001;
     this._scene.add(grid);
 
