@@ -658,15 +658,12 @@ export class CarBuilder {
 
   _addDefaultSkeleton() {
     const WR = WHEEL_R, WW = WHEEL_W;
-    // Verified non-overlapping positions (AABB checked)
     const defs = [
-      { matId: 'body',  pos: [0,    0.25,  0],     size: [1.6,  0.5,  4.0]       },
-      { matId: 'body',  pos: [0,    0.75, -0.3],   size: [1.3,  0.5,  2.2]       },
-      { matId: 'glass', pos: [0,    0.75,  1.0],   size: [1.3,  0.5,  0.3]       },
-      { matId: 'wheel', pos: [-1.05, WR,   1.25],  size: [WW, WR*2, WR*2]        },
-      { matId: 'wheel', pos: [ 1.05, WR,   1.25],  size: [WW, WR*2, WR*2]        },
-      { matId: 'wheel', pos: [-1.05, WR,  -1.35],  size: [WW, WR*2, WR*2]        },
-      { matId: 'wheel', pos: [ 1.05, WR,  -1.35],  size: [WW, WR*2, WR*2]        },
+      { matId: 'body',  pos: [0,     0.40,  0],    size: [1.6, 0.10, 3.2]  },
+      { matId: 'wheel', pos: [-1.0,  WR,    1.1],  size: [WW, WR*2, WR*2] },
+      { matId: 'wheel', pos: [ 1.0,  WR,    1.1],  size: [WW, WR*2, WR*2] },
+      { matId: 'wheel', pos: [-1.0,  WR,   -1.1],  size: [WW, WR*2, WR*2] },
+      { matId: 'wheel', pos: [ 1.0,  WR,   -1.1],  size: [WW, WR*2, WR*2] },
     ];
     for (const d of defs) {
       const pos = new THREE.Vector3(...d.pos);

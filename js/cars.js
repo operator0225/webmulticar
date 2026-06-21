@@ -290,8 +290,8 @@ export function savedCarId() {
 
 const _CBASE_WHEELS = {
   fz: -1.10, rz: 1.48, htF: 0.80, htR: 0.81,
-  attachY: 0.21, restLen: 0.28, radius: 0.33, iw: 1.3,
-  kF: 62000, kR: 58000, cBF: 4500, cRF: 7000, cBR: 4300, cRR: 6800,
+  attachY: 0.18, restLen: 0.10, radius: 0.33, iw: 1.3,
+  kF: 220000, kR: 260000, cBF: 11000, cRF: 16000, cBR: 12000, cRR: 17000,
   maxC: 0.16, muF: 1.02, muR: 1.05,
 };
 
