@@ -177,32 +177,33 @@
   #menu-build:hover { background: rgba(255,210,74,0.2); }
 
   /* ---------- car builder ---------- */
-  #builder { position: fixed; inset: 0; z-index: 90; display: flex; flex-direction: column;
-    background: #222222; pointer-events: auto; overflow: hidden; }
-  #bl-top { display: flex; align-items: center;
+  /* Canvas fills entire builder; UI floats on top — same pattern as game renderer */
+  #builder { position: fixed; inset: 0; z-index: 90; background: #222222; pointer-events: auto; }
+  #bl-canvas { position: absolute; inset: 0; display: block; touch-action: none; }
+  /* UI overlay: pointer-events: none on container, auto on interactive children */
+  #bl-ui { position: absolute; inset: 0; display: flex; flex-direction: column; pointer-events: none; }
+  #bl-top { display: flex; align-items: center; pointer-events: auto;
     padding: max(8px, env(safe-area-inset-top)) 12px 8px;
-    background: rgba(4,16,36,0.82); border-bottom: 1px solid rgba(255,255,255,0.12);
-    gap: 8px; flex-shrink: 0; }
+    background: rgba(20,22,28,0.88); border-bottom: 1px solid rgba(255,255,255,0.10);
+    gap: 8px; }
   #bl-back { background: rgba(255,255,255,0.10); color: #fff;
     border: 1px solid rgba(255,255,255,0.22); border-radius: 8px; padding: 7px 13px;
     font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap; }
   #bl-back:active { background: rgba(255,255,255,0.20); }
   #bl-title { flex: 1; text-align: center; color: #ffd24a; font-size: 14px;
     font-weight: 800; letter-spacing: 2px; }
-  #bl-save { background: rgba(40,130,70,0.45); color: #7ce8a4;
+  #bl-save { background: rgba(40,130,70,0.55); color: #7ce8a4;
     border: 1px solid rgba(100,240,140,0.4); border-radius: 8px; padding: 7px 12px;
     font-size: 12px; font-weight: 800; cursor: pointer; font-family: inherit;
     letter-spacing: 1px; white-space: nowrap; }
-  #bl-save:active { background: rgba(40,130,70,0.70); }
-  #bl-hint { text-align: center; color: rgba(4,16,36,0.75); font-size: 11px;
-    padding: 3px 12px; min-height: 20px; letter-spacing: 0.3px;
-    font-weight: 600; flex-shrink: 0; }
-  #bl-viewport { flex: 1; min-height: 0; position: relative; overflow: hidden; }
-  #bl-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
-  #bl-bar { display: flex; align-items: center; gap: 6px;
+  #bl-save:active { background: rgba(40,130,70,0.80); }
+  #bl-hint { text-align: center; color: rgba(255,255,255,0.55); font-size: 11px;
+    padding: 3px 12px; min-height: 20px; letter-spacing: 0.3px; font-weight: 600; }
+  #bl-gap { flex: 1; } /* transparent tap-through gap for 3D viewport */
+  #bl-bar { display: flex; align-items: center; gap: 6px; pointer-events: auto;
     padding: 8px 10px max(8px, env(safe-area-inset-bottom));
-    background: rgba(4,16,36,0.82); border-top: 1px solid rgba(255,255,255,0.12);
-    overflow-x: auto; flex-shrink: 0; -webkit-overflow-scrolling: touch;
+    background: rgba(20,22,28,0.88); border-top: 1px solid rgba(255,255,255,0.10);
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
     scrollbar-width: none; min-height: 52px; }
   #bl-bar::-webkit-scrollbar { display: none; }
   .bl-mat { min-width: 58px; height: 38px; padding: 0 8px;
@@ -247,7 +248,7 @@
 <!-- Cloudflare Web Analytics -->
 <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "5f92ae19fb414d8e985699513444fda5"}'></script>
 <!-- End Cloudflare Web Analytics -->
-  <script type="module" crossorigin src="./assets/main-CL_FwXgl.js"></script>
+  <script type="module" crossorigin src="./assets/main-B6Rj2fqE.js"></script>
 </head>
 <body>
 <div id="app"></div>
