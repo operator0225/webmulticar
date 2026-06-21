@@ -74,12 +74,15 @@ export class CarBuilder {
     this._dragStartSize  = null;
     this._orbitActive = false;
     this._orbitLast   = null;
-    this._orbitTheta  = 0.55;   // slight offset — camera slightly behind/right of car
-    this._orbitPhi    = 0.32;   // ~18° elevation: more frontal, less top-down
-    this._orbitR      = 6.0;    // pulled back enough to see the full car
-    this._orbitTarget = new THREE.Vector3(0, 0.35, 0); // matches default skeleton centre
-    this._pointers    = new Map();   // pointerId → {x,y} for pinch-zoom tracking
+    this._orbitTheta  = 0.55;
+    this._orbitPhi    = 0.32;
+    this._orbitR      = 6.0;
+    this._orbitTarget = new THREE.Vector3(0, 0.35, 0);
+    this._pointers    = new Map();   // pointerId → {x,y}
     this._pinchDist   = null;
+    this._panLast     = null;        // midpoint of 2-finger touch for panning
+    this._tapEvent    = null;        // stored pointer-down position for deferred tap
+    this._dragDist    = 0;           // pixels moved since pointer-down (tap vs drag)
     this._longTimer   = null;
     this._running     = false;
     this.onDestroy    = null;
@@ -411,116 +414,90 @@ export class CarBuilder {
     this._canvas.setPointerCapture(e.pointerId);
     this._pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
-    // Two-finger pinch: initialise and skip all other interactions
     if (this._pointers.size === 2) {
+      // Two-finger: init pinch + pan, cancel any single-finger state
       const pts = [...this._pointers.values()];
       this._pinchDist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
-      this._dragHandle = null;
+      this._panLast = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
+      this._dragHandle  = null;
       this._orbitActive = false;
+      this._tapEvent    = null;
       clearTimeout(this._longTimer);
       return;
     }
 
-    const ray = this._raycast(e);
+    // Single finger: record start for deferred tap and drag detection
+    this._tapEvent  = { clientX: e.clientX, clientY: e.clientY };
+    this._dragDist  = 0;
+    this._orbitLast = { x: e.clientX, y: e.clientY };
 
-    // 1. Handle spheres
+    // Check for drag-handle hit immediately (needs start position)
     if (this._handles.length) {
+      const ray = this._raycast(e);
       const hits = ray.intersectObjects(this._handles, false);
       if (hits.length) {
-        this._dragHandle = hits[0].object;
+        this._dragHandle     = hits[0].object;
         this._dragStartMouse = { x: e.clientX, y: e.clientY };
         this._dragStartPos   = this._selected.pos.clone();
         this._dragStartSize  = [...this._selected.size];
+        this._tapEvent = null;
         return;
       }
     }
 
-    // 2. Existing block hit
+    // Pre-arm long-press timer (cancelled if finger moves)
+    const ray = this._raycast(e);
     const bMeshes = this._blocks.map(b => b.mesh);
     const bHits = ray.intersectObjects(bMeshes, false);
     if (bHits.length) {
       const block = this._blocks.find(b => b.mesh === bHits[0].object);
-      if (!block) return;
-
-      if (this._mode === 'delete') { this._deleteBlock(block); return; }
-      if (this._mode === 'place') this._exitPlace();
-
-      if (this._selected === block) {
-        // tap same block → toggle scale/move
-        if (block.matId !== 'wheel' && this._handleMode === 'scale') this._showMoveHandles(block);
-        else if (block.matId !== 'wheel') this._showScaleHandles(block);
-      } else {
-        this._select(block);
-      }
-
-      clearTimeout(this._longTimer);
-      if (block.matId !== 'wheel') {
+      if (block && block.matId !== 'wheel') {
         this._longTimer = setTimeout(() => {
-          if (this._selected === block && this._handleMode !== 'move') this._showMoveHandles(block);
+          if (!this._orbitActive && this._selected === block && this._handleMode !== 'move')
+            this._showMoveHandles(block);
         }, 480);
       }
-      return;
     }
-
-    // 3. Place on floor or top of block
-    if (this._mode === 'place' && this._pendingMat) {
-      const plHits = ray.intersectObjects([this._floorMesh, ...bMeshes], false);
-      if (plHits.length) {
-        const pt = plHits[0].point.clone();
-        pt.x = snap(pt.x);
-        pt.z = snap(pt.z);
-        const szHalf = this._pendingMat === 'wheel' ? WHEEL_R : DEFAULT_SIZE / 2;
-        pt.y = plHits[0].point.y + szHalf;
-        const blk = this._addBlock(this._pendingMat, pt);
-        if (blk) { this._select(blk); this._exitPlace(); }
-        return;
-      }
-    }
-
-    // 4. Orbit
-    clearTimeout(this._longTimer);
-    if (this._mode !== 'delete') this._deselect();
-    this._mode = 'select';
-    this._orbitActive = true;
-    this._orbitLast = { x: e.clientX, y: e.clientY };
   }
 
   _pm(e) {
-    // Keep pointer map current for pinch calculations
     if (this._pointers.has(e.pointerId)) {
       this._pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     }
 
-    // Two-finger pinch zoom
+    // Two-finger: pinch zoom + pan simultaneously
     if (this._pointers.size === 2 && this._pinchDist !== null) {
       const pts = [...this._pointers.values()];
       const newDist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
       this._orbitR = Math.max(2.5, Math.min(18, this._orbitR + (this._pinchDist - newDist) * 0.025));
       this._pinchDist = newDist;
+      const mx = (pts[0].x + pts[1].x) / 2;
+      const my = (pts[0].y + pts[1].y) / 2;
+      if (this._panLast) {
+        this._panOrbit(mx - this._panLast.x, my - this._panLast.y);
+      }
+      this._panLast = { x: mx, y: my };
       this._updateCam();
       return;
     }
 
+    // Handle drag (scale / move handles)
     if (this._dragHandle) {
       clearTimeout(this._longTimer);
       const block = this._selected;
       if (!block) return;
-
       const rect = this._canvas.getBoundingClientRect();
       const dxS = (e.clientX - this._dragStartMouse.x) / rect.width  * 2;
       const dyS = -(e.clientY - this._dragStartMouse.y) / rect.height * 2;
-
       const AXES = [new THREE.Vector3(1,0,0), new THREE.Vector3(0,1,0), new THREE.Vector3(0,0,1)];
       const axis = this._dragHandle.userData.axis;
       const dir  = this._dragHandle.userData.dir;
       const mode = this._dragHandle.userData.mode;
       const proj = this._projAxis(block.pos.clone(), AXES[axis].clone().multiplyScalar(dir));
       const scalar = dxS * proj.x + dyS * proj.y;
-
       if (mode === 'scale') {
         const ns = [...this._dragStartSize];
         ns[axis] = Math.max(0.12, this._dragStartSize[axis] + scalar * 4.0);
-        // Y: don't let the bottom penetrate the floor
         if (axis === 1) ns[1] = Math.min(ns[1], this._dragStartPos.y * 2);
         block.size = ns;
         this._applySize(block);
@@ -542,8 +519,18 @@ export class CarBuilder {
       return;
     }
 
+    // Single-finger orbit: activate once drag threshold (8px) is crossed
+    if (this._tapEvent) {
+      const dx = e.clientX - this._tapEvent.clientX;
+      const dy = e.clientY - this._tapEvent.clientY;
+      this._dragDist = Math.hypot(dx, dy);
+      if (this._dragDist > 8) {
+        clearTimeout(this._longTimer);
+        this._orbitActive = true;
+      }
+    }
+
     if (this._orbitActive && this._orbitLast) {
-      clearTimeout(this._longTimer);
       const dx = e.clientX - this._orbitLast.x;
       const dy = e.clientY - this._orbitLast.y;
       this._orbitTheta -= dx * 0.009;
@@ -554,12 +541,78 @@ export class CarBuilder {
   }
 
   _pu(e) {
+    const wasDrag   = this._dragDist > 8;
+    const wasHandle = !!this._dragHandle;
+    const tapEv     = this._tapEvent;
+
     if (e) this._pointers.delete(e.pointerId);
-    if (this._pointers.size < 2) this._pinchDist = null;
+    if (this._pointers.size < 2) { this._pinchDist = null; this._panLast = null; }
     clearTimeout(this._longTimer);
     this._dragHandle  = null;
     this._orbitActive = false;
     this._orbitLast   = null;
+    this._tapEvent    = null;
+    this._dragDist    = 0;
+
+    // Fire tap interaction only on clean short press (no drag, no handle, last finger up)
+    if (!wasDrag && !wasHandle && tapEv && this._pointers.size === 0) {
+      this._handleTap(tapEv);
+    }
+  }
+
+  // Pan the orbit target in camera-relative XY plane.
+  // dx/dy are screen-pixel deltas (midpoint of 2-finger touch).
+  _panOrbit(dx, dy) {
+    const s = this._orbitR * 0.0016;
+    const phi = this._orbitPhi, theta = this._orbitTheta;
+    const t = this._orbitTarget;
+    // camera right vector: (cos θ, 0, -sin θ)
+    t.x -= dx * Math.cos(theta) * s;
+    t.z += dx * Math.sin(theta) * s;
+    // camera up-ish vector: (-sin φ·sin θ, cos φ, -sin φ·cos θ)
+    t.x += dy * Math.sin(phi) * Math.sin(theta) * s;
+    t.y -= dy * Math.cos(phi) * s;
+    t.z += dy * Math.sin(phi) * Math.cos(theta) * s;
+  }
+
+  // Handle a confirmed tap (short press without drag).
+  _handleTap(ev) {
+    const ray = this._raycast(ev);
+    const bMeshes = this._blocks.map(b => b.mesh);
+
+    // 1. Existing block hit
+    const bHits = ray.intersectObjects(bMeshes, false);
+    if (bHits.length) {
+      const block = this._blocks.find(b => b.mesh === bHits[0].object);
+      if (!block) return;
+      if (this._mode === 'delete') { this._deleteBlock(block); return; }
+      if (this._mode === 'place') this._exitPlace();
+      if (this._selected === block) {
+        if (block.matId !== 'wheel' && this._handleMode === 'scale') this._showMoveHandles(block);
+        else if (block.matId !== 'wheel') this._showScaleHandles(block);
+      } else {
+        this._select(block);
+      }
+      return;
+    }
+
+    // 2. Place on floor or block surface
+    if (this._mode === 'place' && this._pendingMat) {
+      const plHits = ray.intersectObjects([this._floorMesh, ...bMeshes], false);
+      if (plHits.length) {
+        const pt = plHits[0].point.clone();
+        pt.x = snap(pt.x); pt.z = snap(pt.z);
+        const szHalf = this._pendingMat === 'wheel' ? WHEEL_R : DEFAULT_SIZE / 2;
+        pt.y = plHits[0].point.y + szHalf;
+        const blk = this._addBlock(this._pendingMat, pt);
+        if (blk) { this._select(blk); this._exitPlace(); }
+        return;
+      }
+    }
+
+    // 3. Empty space tap → deselect
+    if (this._mode !== 'delete') this._deselect();
+    this._mode = 'select';
   }
 
   _exitPlace() {
