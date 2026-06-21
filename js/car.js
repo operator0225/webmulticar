@@ -953,7 +953,7 @@ export class CarVisual {
       color: V.accent, roughness: 0.5, emissive: V.accent, emissiveIntensity: 0.15,
     });
 
-    const open = this.type !== 'road';   // kart / formula = open cockpit (no cabin)
+    const open = this.type === 'kart' || this.type === 'formula';  // only open-wheel cars lack cabin
     const drvX = open ? 0 : -0.37;        // centered driver in open-wheel cars
 
     if (!open) {

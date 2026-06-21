@@ -120,9 +120,12 @@ export class Vehicle {
     }
     this.pos.y = maxY + this.comH + 0.03;
     this.vel.set(0, 0, 0); this.angVel.set(0, 0, 0);
-    this.gear = 1; this.rpm = this.spec.engine.idle; this.shiftTimer = 0;
+    this.gear = 1; this.rpm = this.spec.engine.idle;
+    this.shiftTimer = 0; this.shiftCooldown = 0;
+    this.tcCut = 0; this._shiftDip = 0;
+    this.scrape = 0; this.landImpact = 0; this._airTime = 0;
     this.distAccum = 0;
-    for (const w of this.wheels) { w.omega = 0; w.comp = 0; w.prevComp = 0; }
+    for (const w of this.wheels) { w.omega = 0; w.comp = 0; w.prevComp = 0; w.slipRatio = 0; w.slipAngle = 0; }
     const q = this.track.query(p.x, p.z, {});
     if (q) { this.trackS = q.s; this._prevS = q.s; }
   }
@@ -291,12 +294,12 @@ export class Vehicle {
       w.comp = Math.min(comp, w.maxCompress + 0.08);
       // clamp the damper input: a surface kink crossed at speed must read as
       // a bump, not as a 20 m/s compression spike that launches the car
-      const compRate = THREE.MathUtils.clamp((w.comp - w.prevComp) / dt, -6, 4);
+      const compRate = THREE.MathUtils.clamp((w.comp - w.prevComp) / dt, -2, 4);
       w.rate = compRate;
 
       // spring + bottom-out + damper + ARB
       let fSus = w.k * Math.max(0, w.comp);
-      if (w.comp > w.maxCompress) fSus += (w.comp - w.maxCompress) * w.k * 0.15;
+      if (w.comp > w.maxCompress) fSus += (w.comp - w.maxCompress) * w.k * 0.04;
       fSus += compRate * (compRate > 0 ? w.cBump : w.cReb);
       const opp = this.wheels[wi ^ 1];                  // FL<->FR, RL<->RR
       fSus += (w.front ? this.arbF : this.arbR) * (w.comp - opp.comp);
@@ -433,9 +436,11 @@ export class Vehicle {
     if (wMag > 25) wB.multiplyScalar(25 / wMag);
     this.angVel.copy(wB.applyQuaternion(this.quat));
 
-    // kill upward velocity when wheels are grounded — removes bounce
-    if (contactCount >= 2 && this.vel.y > 0)
-      this.vel.y *= Math.max(0, 1 - 9.0 * dt);
+    // kill vertical velocity when grounded — very stiff, almost no bounce
+    if (contactCount >= 2) {
+      if (this.vel.y > 0) this.vel.y *= Math.max(0, 1 - 28.0 * dt);
+      else if (this.vel.y < -0.5) this.vel.y *= Math.max(0, 1 - 14.0 * dt);
+    }
 
     const vMag = this.vel.length();
     if (vMag > 130) this.vel.multiplyScalar(130 / vMag);   // 468 km/h sanity cap
