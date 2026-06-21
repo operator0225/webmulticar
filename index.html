@@ -218,6 +218,38 @@
   #bl-delete { background: rgba(160,30,30,0.65); }
   #bl-delete.active { background: rgba(220,50,50,0.80); }
 
+  /* ---------- car garage ---------- */
+  #garage { position: fixed; inset: 0; z-index: 85; background: #0d1117;
+    display: flex; align-items: flex-start; justify-content: center;
+    overflow-y: auto; pointer-events: auto; }
+  #gar-inner { width: min(440px, 100%); padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+  #gar-top { display: flex; align-items: center; gap: 10px;
+    padding: max(14px, env(safe-area-inset-top)) 16px 14px;
+    background: #0d1117; position: sticky; top: 0; z-index: 1;
+    border-bottom: 1px solid rgba(255,255,255,0.08); }
+  #gar-back { background: rgba(255,255,255,0.08); color: #fff;
+    border: 1px solid rgba(255,255,255,0.18); border-radius: 8px; padding: 7px 13px;
+    font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
+  #gar-back:active { background: rgba(255,255,255,0.18); }
+  #gar-title { flex: 1; text-align: center; color: #ffd24a;
+    font-size: 14px; font-weight: 800; letter-spacing: 2px; }
+  #gar-list { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+  #gar-new { width: 100%; padding: 18px; background: rgba(30,120,60,0.25);
+    border: 1.5px dashed rgba(100,240,140,0.45); border-radius: 14px;
+    color: #7ce8a4; font-size: 15px; font-weight: 800; letter-spacing: 1px;
+    cursor: pointer; font-family: inherit; }
+  #gar-new:active { background: rgba(30,120,60,0.50); }
+  #gar-empty { text-align: center; color: rgba(255,255,255,0.28);
+    font-size: 13px; padding: 16px 0 4px; margin: 0; }
+  .gar-item { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 12px; padding: 14px 16px; cursor: pointer;
+    display: flex; align-items: center; gap: 10px; }
+  .gar-item:active { background: rgba(255,255,255,0.10); }
+  .gar-item-name { flex: 1; color: #fff; font-size: 15px; font-weight: 700; }
+  .gar-item-sub { color: rgba(255,255,255,0.35); font-size: 11px;
+    font-family: 'SF Mono', monospace; }
+  .gar-item-arr { color: #ffd24a; font-size: 12px; font-weight: 800; letter-spacing: 1px; }
+
   #tap-start { position: fixed; inset: 0; z-index: 99; background: rgba(4,9,17,0.94);
     display: flex; align-items: center; justify-content: center; color: #fff;
     text-align: center; pointer-events: auto; }

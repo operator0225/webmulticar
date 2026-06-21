@@ -8,7 +8,7 @@ import { DEM } from './dem_data.js';
 import { setDem, demHeight } from './terrain.js';
 import { trackMeta } from './tracks/index.js';
 import { showMenu } from './menu.js';
-import { CarBuilder } from './builder.js';
+import { CarBuilder, showCarGarage } from './builder.js';
 import { Track, setTrackWidth } from './track.js';
 import { Vehicle, DT, setWeatherGrip } from './physics.js';
 import { buildWorld, groundHeightAt } from './world.js';
@@ -519,24 +519,37 @@ function beginDrive() {
 function launchMenu() {
   paused = true;
   hud.toggleHelp(false);
+
+  const _onStart = (selTrack, selCar) => {
+    if (selTrack !== trackId) {
+      localStorage.setItem('ns-track', selTrack);
+      localStorage.setItem('ns-car', selCar);
+      sessionStorage.setItem('ns-go', '1');
+      location.reload();
+    } else {
+      if (selCar !== carId) { localStorage.setItem('ns-car', selCar); setCar(selCar); }
+      beginDrive();
+    }
+  };
+
+  const openBuilder = (editData) => {
+    _builderOpen = true;
+    const builder = new CarBuilder(editData);
+    builder.onDestroy = () => { _builderOpen = false; openGarage(); };
+  };
+
+  const openGarage = () => {
+    showCarGarage({
+      onBack:  () => showMenu({ trackData: TRACK_DATA, currentTrack: trackId, currentCar: carId, onStart: _onStart, onBuild: openGarage }),
+      onNew:   () => openBuilder(null),
+      onEdit:  (d) => openBuilder(d),
+    });
+  };
+
   showMenu({
     trackData: TRACK_DATA, currentTrack: trackId, currentCar: carId,
-    onStart: (selTrack, selCar) => {
-      if (selTrack !== trackId) {
-        localStorage.setItem('ns-track', selTrack);
-        localStorage.setItem('ns-car', selCar);
-        sessionStorage.setItem('ns-go', '1');
-        location.reload();
-      } else {
-        if (selCar !== carId) { localStorage.setItem('ns-car', selCar); setCar(selCar); }
-        beginDrive();
-      }
-    },
-    onBuild: () => {
-      _builderOpen = true;
-      const builder = new CarBuilder();
-      builder.onDestroy = () => { _builderOpen = false; launchMenu(); };
-    },
+    onStart: _onStart,
+    onBuild: openGarage,
   });
 }
 

@@ -23,8 +23,43 @@ function _makeMat(def) {
 
 function snap(v) { return Math.round(v / GRID) * GRID; }
 
+// ── Car Garage — pick existing car to edit or create new ────────────────────
+
+export function showCarGarage({ onNew, onEdit, onBack }) {
+  let cars;
+  try { cars = JSON.parse(localStorage.getItem('ns-custom-cars') || '[]'); }
+  catch { cars = []; }
+
+  const el = document.createElement('div');
+  el.id = 'garage';
+  el.innerHTML = `
+    <div id="gar-inner">
+      <div id="gar-top">
+        <button id="gar-back">&#8592; BACK</button>
+        <span id="gar-title">MY CARS</span>
+      </div>
+      <div id="gar-list">
+        <button id="gar-new">＋ CREATE NEW CAR</button>
+        ${!cars.length ? '<p id="gar-empty">No cars yet — tap CREATE to build your first!</p>' : ''}
+        ${cars.map((c, i) => `<div class="gar-item" data-i="${i}">
+          <div class="gar-item-name">${c.name || 'Untitled'}</div>
+          <div class="gar-item-sub">${(c.blocks || []).length} blocks</div>
+          <div class="gar-item-arr">EDIT →</div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  document.body.appendChild(el);
+
+  el.querySelector('#gar-back').addEventListener('click', () => { el.remove(); if (onBack) onBack(); });
+  el.querySelector('#gar-new').addEventListener('click', () => { el.remove(); onNew(); });
+  el.querySelectorAll('.gar-item').forEach(item => {
+    item.addEventListener('click', () => { el.remove(); onEdit(cars[+item.dataset.i]); });
+  });
+}
+
 export class CarBuilder {
-  constructor() {
+  constructor(editData = null) {
+    this._editData = editData; // null = new car, object = editing existing
     this._blocks     = [];
     this._selected   = null;
     this._selWire    = null;
@@ -603,24 +638,22 @@ export class CarBuilder {
 
   _save() {
     if (!this._blocks.length) { this._hint('Add some blocks first!'); return; }
-    const name = window.prompt('이름을 입력하세요 / Enter car name:', 'My Car');
-    if (!name || !name.trim()) return;
+    const name = window.prompt('이름을 입력하세요 / Enter car name:',
+      this._editData?.name || 'My Car');
+    if (!name?.trim()) return;
 
     const data = {
-      id: 'custom_' + Date.now(),
+      id: this._editData?.id ?? ('custom_' + Date.now()),
       name: name.trim(),
       blocks: this._blocks.map(b => ({
-        matId: b.matId,
-        size:  [...b.size],
-        pos:   [b.pos.x, b.pos.y, b.pos.z],
+        matId: b.matId, size: [...b.size], pos: [b.pos.x, b.pos.y, b.pos.z],
       })),
       wheelSpec: this._computeWheelSpec(),
     };
     registerCustomCar(data);
-
-    // Also save editor state so user can resume
+    this._editData = data; // update so future saves keep the same ID
     localStorage.setItem('ns-builder-draft', JSON.stringify(data.blocks));
-    this._hint(`"${name.trim()}" saved! Select it in the menu to drive.`);
+    this._hint(`"${data.name}" saved! Select it in the menu to drive.`);
   }
 
   _addDefaultSkeleton() {
@@ -647,22 +680,32 @@ export class CarBuilder {
     }
   }
 
+  _loadBlocks(list) {
+    for (const b of list) {
+      const pos = new THREE.Vector3(b.pos[0], b.pos[1], b.pos[2]);
+      const mesh = this._newMesh(b.matId);
+      mesh.position.copy(pos);
+      const block = { mesh, matId: b.matId, size: [...b.size], pos: pos.clone() };
+      if (b.matId !== 'wheel') {
+        block.mesh.scale.set(b.size[0] / DEFAULT_SIZE, b.size[1] / DEFAULT_SIZE, b.size[2] / DEFAULT_SIZE);
+      }
+      this._blocks.push(block);
+    }
+  }
+
   _load() {
+    // Edit mode: load the car's saved blocks
+    if (this._editData?.blocks?.length) {
+      this._loadBlocks(this._editData.blocks);
+      return;
+    }
+    // New car mode: restore from draft if available
     try {
       const raw = localStorage.getItem('ns-builder-draft');
-      if (!raw) { this._addDefaultSkeleton(); return; }
-      for (const b of JSON.parse(raw)) {
-        const pos = new THREE.Vector3(b.pos[0], b.pos[1], b.pos[2]);
-        const mesh = this._newMesh(b.matId);
-        mesh.position.copy(pos);
-        const block = { mesh, matId: b.matId, size: [...b.size], pos: pos.clone() };
-        if (b.matId !== 'wheel') {
-          block.mesh.scale.set(b.size[0] / DEFAULT_SIZE, b.size[1] / DEFAULT_SIZE, b.size[2] / DEFAULT_SIZE);
-        }
-        this._blocks.push(block);
-      }
-      if (!this._blocks.length) this._addDefaultSkeleton();
-    } catch { this._addDefaultSkeleton(); }
+      const parsed = raw ? JSON.parse(raw) : null;
+      if (parsed?.length) { this._loadBlocks(parsed); return; }
+    } catch {}
+    this._addDefaultSkeleton();
   }
 
   // ── cleanup ───────────────────────────────────────────────────────────────
