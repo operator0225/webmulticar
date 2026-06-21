@@ -74,10 +74,10 @@ export class CarBuilder {
     this._dragStartSize  = null;
     this._orbitActive = false;
     this._orbitLast   = null;
-    this._orbitTheta  = 0.75;
-    this._orbitPhi    = 0.40;
-    this._orbitR      = 7.0;
-    this._orbitTarget = new THREE.Vector3(0, 0.6, 0);
+    this._orbitTheta  = 0.55;   // slight offset — camera slightly behind/right of car
+    this._orbitPhi    = 0.32;   // ~18° elevation: more frontal, less top-down
+    this._orbitR      = 6.0;    // pulled back enough to see the full car
+    this._orbitTarget = new THREE.Vector3(0, 0.35, 0); // matches default skeleton centre
     this._pointers    = new Map();   // pointerId → {x,y} for pinch-zoom tracking
     this._pinchDist   = null;
     this._longTimer   = null;

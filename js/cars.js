@@ -288,11 +288,15 @@ export function savedCarId() {
 
 // ---- Custom car system ---------------------------------------------------
 
+// Stiff suspension (minimal travel) calibrated so wheels sit on the ground.
+// Geometry constraint: restLen + radius >= comH + attachY for ground contact.
+// With comH=0.35, attachY=0.21, radius=0.33: restLen >= 0.23 → using 0.24.
+// kF/kR chosen so static comp ≈ 1.3 cm (barely perceptible travel).
 const _CBASE_WHEELS = {
   fz: -1.10, rz: 1.48, htF: 0.80, htR: 0.81,
-  attachY: 0.18, restLen: 0.10, radius: 0.33, iw: 1.3,
-  kF: 220000, kR: 260000, cBF: 11000, cRF: 16000, cBR: 12000, cRR: 17000,
-  maxC: 0.16, muF: 1.02, muR: 1.05,
+  attachY: 0.21, restLen: 0.24, radius: 0.33, iw: 1.3,
+  kF: 220000, kR: 260000, cBF: 12000, cRF: 14000, cBR: 13000, cRR: 15000,
+  maxC: 0.10, muF: 1.02, muR: 1.05,
 };
 
 export function registerCustomCar(data) {
