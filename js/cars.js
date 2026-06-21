@@ -285,3 +285,55 @@ export function savedCarId() {
   const id = localStorage.getItem('ns-car');
   return CARS[id] && !CARS[id].hidden ? id : 'avante';
 }
+
+// ---- Custom car system ---------------------------------------------------
+
+const _CBASE_WHEELS = {
+  fz: -1.10, rz: 1.48, htF: 0.80, htR: 0.81,
+  attachY: 0.21, restLen: 0.28, radius: 0.33, iw: 1.3,
+  kF: 62000, kR: 58000, cBF: 4500, cRF: 7000, cBR: 4300, cRR: 6800,
+  maxC: 0.16, muF: 1.02, muR: 1.05,
+};
+
+export function registerCustomCar(data) {
+  const av = CARS.avante;
+  CARS[data.id] = {
+    id: data.id, name: data.name,
+    mass: 1200,
+    inertia: [2000, 2300, 500],
+    comH: 0.35,
+    drive: 'RWD',
+    wheels: data.wheelSpec
+      ? { ..._CBASE_WHEELS, ...data.wheelSpec }
+      : { ..._CBASE_WHEELS },
+    arbF: 28000, arbR: 22000,
+    engine: { ...av.engine },
+    engine_model: { ...av.engine_model },
+    gears: [...av.gears], final: av.final, reverse: av.reverse,
+    brakeT: 5200, bias: 0.56,
+    aero: { cda: 0.60, cla: 0.20 },
+    audio: { ...av.audio },
+    visual: {
+      type: 'custom', color: 0x1a4fa8, accent: 0xcc1400,
+      blocks: data.blocks, roofY: 0.55, rearY: 0.35,
+    },
+    dialMax: 8, dialRed: 7, dialSpeed: 260,
+    isCustom: true,
+  };
+  const list = _customList();
+  const i = list.findIndex(c => c.id === data.id);
+  if (i >= 0) list[i] = data; else list.push(data);
+  localStorage.setItem('ns-custom-cars', JSON.stringify(list));
+}
+
+function _customList() {
+  try { return JSON.parse(localStorage.getItem('ns-custom-cars') || '[]'); }
+  catch { return []; }
+}
+
+// populate CARS from localStorage at module startup
+(function _loadCustomCars() {
+  for (const d of _customList()) {
+    try { registerCustomCar(d); } catch { /* skip bad entry */ }
+  }
+})();

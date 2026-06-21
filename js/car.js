@@ -118,6 +118,7 @@ export class CarVisual {
     if (t === 'gt3')    { this._buildGT3Ext();    return; }
     if (t === 'gt3rs')  { this._buildGT3RSExt();  return; }
     if (t === 'gt3r')   { this._buildGT3RExt();   return; }
+    if (t === 'custom') { this._buildCustomExt(); return; }
     this._buildGenericExt();
   }
 
@@ -788,6 +789,37 @@ export class CarVisual {
     for (const sx of [-1, 1]) mk(pGeo, pMat, sx * 0.56, -0.22, 1.88);
 
     this._buildWheels(0.28); // slightly wider slick tire
+  }
+
+  // ---------------------------------------------------------------- User-built custom car
+  _buildCustomExt() {
+    const blocks = (this.spec.visual && this.spec.visual.blocks) || [];
+    const comH = this.spec.comH || 0.35;
+    const e = this.exterior;
+    const mats = {
+      body:   new THREE.MeshPhysicalMaterial({
+        color: 0x1a4fa8, metalness: 0.82, roughness: 0.14,
+        clearcoat: 1.0, clearcoatRoughness: 0.05, envMapIntensity: 3.2,
+      }),
+      glass:  new THREE.MeshPhysicalMaterial({
+        color: 0xaaddff, metalness: 0.05, roughness: 0.06,
+        transparent: true, opacity: 0.35, envMapIntensity: 2.0,
+      }),
+      carbon: new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.18, metalness: 0.55 }),
+    };
+    for (const b of blocks) {
+      if (b.matId === 'wheel') continue; // physics wheels handle geometry + spinning
+      const mat = mats[b.matId] || mats.body;
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(b.size[0], b.size[1], b.size[2]),
+        mat
+      );
+      mesh.position.set(b.pos[0], b.pos[1] - comH, b.pos[2]);
+      mesh.castShadow = true;
+      e.add(mesh);
+    }
+    this._buildWheels(0.24);
+    this._headlightMat = null;
   }
 
   // four spinning wheel groups (positioned each frame in update)
