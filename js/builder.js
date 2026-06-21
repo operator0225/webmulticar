@@ -42,6 +42,8 @@ export class CarBuilder {
     this._orbitTheta  = 0.75;
     this._orbitPhi    = 0.40;
     this._orbitR      = 7.0;
+    this._pointers    = new Map();   // pointerId → {x,y} for pinch-zoom tracking
+    this._pinchDist   = null;
     this._longTimer   = null;
     this._running     = false;
     this.onDestroy    = null;
@@ -337,6 +339,19 @@ export class CarBuilder {
 
   _pd(e) {
     e.preventDefault();
+    this._canvas.setPointerCapture(e.pointerId);
+    this._pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    // Two-finger pinch: initialise and skip all other interactions
+    if (this._pointers.size === 2) {
+      const pts = [...this._pointers.values()];
+      this._pinchDist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+      this._dragHandle = null;
+      this._orbitActive = false;
+      clearTimeout(this._longTimer);
+      return;
+    }
+
     const ray = this._raycast(e);
 
     // 1. Handle spheres
@@ -402,6 +417,21 @@ export class CarBuilder {
   }
 
   _pm(e) {
+    // Keep pointer map current for pinch calculations
+    if (this._pointers.has(e.pointerId)) {
+      this._pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    }
+
+    // Two-finger pinch zoom
+    if (this._pointers.size === 2 && this._pinchDist !== null) {
+      const pts = [...this._pointers.values()];
+      const newDist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+      this._orbitR = Math.max(2.5, Math.min(18, this._orbitR + (this._pinchDist - newDist) * 0.025));
+      this._pinchDist = newDist;
+      this._updateCam();
+      return;
+    }
+
     if (this._dragHandle) {
       clearTimeout(this._longTimer);
       const block = this._selected;
@@ -454,7 +484,9 @@ export class CarBuilder {
     }
   }
 
-  _pu() {
+  _pu(e) {
+    if (e) this._pointers.delete(e.pointerId);
+    if (this._pointers.size < 2) this._pinchDist = null;
     clearTimeout(this._longTimer);
     this._dragHandle  = null;
     this._orbitActive = false;
@@ -591,10 +623,34 @@ export class CarBuilder {
     this._hint(`"${name.trim()}" saved! Select it in the menu to drive.`);
   }
 
+  _addDefaultSkeleton() {
+    const WR = WHEEL_R, WW = WHEEL_W;
+    // Verified non-overlapping positions (AABB checked)
+    const defs = [
+      { matId: 'body',  pos: [0,    0.25,  0],     size: [1.6,  0.5,  4.0]       },
+      { matId: 'body',  pos: [0,    0.75, -0.3],   size: [1.3,  0.5,  2.2]       },
+      { matId: 'glass', pos: [0,    0.75,  1.0],   size: [1.3,  0.5,  0.3]       },
+      { matId: 'wheel', pos: [-1.05, WR,   1.25],  size: [WW, WR*2, WR*2]        },
+      { matId: 'wheel', pos: [ 1.05, WR,   1.25],  size: [WW, WR*2, WR*2]        },
+      { matId: 'wheel', pos: [-1.05, WR,  -1.35],  size: [WW, WR*2, WR*2]        },
+      { matId: 'wheel', pos: [ 1.05, WR,  -1.35],  size: [WW, WR*2, WR*2]        },
+    ];
+    for (const d of defs) {
+      const pos = new THREE.Vector3(...d.pos);
+      const mesh = this._newMesh(d.matId);
+      mesh.position.copy(pos);
+      const block = { mesh, matId: d.matId, size: [...d.size], pos: pos.clone() };
+      if (d.matId !== 'wheel') {
+        block.mesh.scale.set(d.size[0] / DEFAULT_SIZE, d.size[1] / DEFAULT_SIZE, d.size[2] / DEFAULT_SIZE);
+      }
+      this._blocks.push(block);
+    }
+  }
+
   _load() {
     try {
       const raw = localStorage.getItem('ns-builder-draft');
-      if (!raw) return;
+      if (!raw) { this._addDefaultSkeleton(); return; }
       for (const b of JSON.parse(raw)) {
         const pos = new THREE.Vector3(b.pos[0], b.pos[1], b.pos[2]);
         const mesh = this._newMesh(b.matId);
@@ -605,7 +661,8 @@ export class CarBuilder {
         }
         this._blocks.push(block);
       }
-    } catch { /* ignore bad draft */ }
+      if (!this._blocks.length) this._addDefaultSkeleton();
+    } catch { this._addDefaultSkeleton(); }
   }
 
   // ── cleanup ───────────────────────────────────────────────────────────────
