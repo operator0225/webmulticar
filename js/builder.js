@@ -74,24 +74,37 @@ export class CarBuilder {
       </div>`;
     document.body.appendChild(this._el);
 
-    // Three.js
-    const cv = this._el.querySelector('#bl-canvas');
-    this._canvas = cv;
-    this._renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
+    // Wire canvas + buttons NOW, before Three.js which might throw on low-end devices.
+    this._canvas = this._el.querySelector('#bl-canvas');
+    this._bindEvents();
+
+    // Three.js — initialise after buttons are wired so BACK always works.
+    this._initGL();
+  }
+
+  _initGL() {
+    const cv = this._canvas;
+    try {
+      this._renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
+    } catch (e) {
+      this._hint('WebGL unavailable — try reloading. (' + e.message + ')');
+      return;
+    }
+
     this._renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     this._renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this._renderer.toneMappingExposure = 1.1;
     this._renderer.shadowMap.enabled = true;
 
     this._scene = new THREE.Scene();
-    this._scene.background = new THREE.Color(0x222222);
-    this._scene.fog = new THREE.FogExp2(0x222222, 0.03);
+    this._scene.background = new THREE.Color(0x2a2a2a);
+    this._scene.fog = new THREE.FogExp2(0x2a2a2a, 0.03);
 
     this._camera = new THREE.PerspectiveCamera(50, 1, 0.05, 80);
     this._updateCam();
 
     // Lights
-    this._scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+    this._scene.add(new THREE.AmbientLight(0xffffff, 0.80));
     const sun = new THREE.DirectionalLight(0xfffaf0, 1.2);
     sun.position.set(5, 14, 7);
     sun.castShadow = true;
@@ -100,7 +113,9 @@ export class CarBuilder {
     sun.shadow.camera.left = sun.shadow.camera.bottom = -8;
     sun.shadow.camera.right = sun.shadow.camera.top = 8;
     this._scene.add(sun);
-    this._scene.add(Object.assign(new THREE.DirectionalLight(0xb0d8f0, 0.35), { position: { x: -4, y: 3, z: -5 } }));
+    const fill = new THREE.DirectionalLight(0xb0d8f0, 0.35);
+    fill.position.set(-4, 3, -5);  // fixed: Object.assign would replace Vector3 with plain object
+    this._scene.add(fill);
 
     // Floor
     const floor = new THREE.Mesh(
@@ -115,15 +130,13 @@ export class CarBuilder {
     this._scene.add(floor);
 
     // Grid
-    const grid = new THREE.GridHelper(16, 32, 0xaaaaaa, 0xcccccc);
+    const grid = new THREE.GridHelper(16, 32, 0x999999, 0xbbbbbb);
     grid.position.y = 0.001;
     this._scene.add(grid);
 
-    // Raycaster
     this._ray = new THREE.Raycaster();
     this._mouse = new THREE.Vector2();
 
-    this._bindEvents();
     this._load();
 
     this._resizeCb = () => this._resize();
@@ -600,12 +613,14 @@ export class CarBuilder {
   destroy() {
     this._running = false;
     clearTimeout(this._longTimer);
-    window.removeEventListener('resize', this._resizeCb);
-    this._canvas.removeEventListener('pointerdown',  this._pdCb);
-    this._canvas.removeEventListener('pointermove',  this._pmCb);
-    this._canvas.removeEventListener('pointerup',    this._puCb);
-    this._canvas.removeEventListener('pointercancel',this._puCb);
-    this._renderer.dispose();
+    if (this._resizeCb) window.removeEventListener('resize', this._resizeCb);
+    if (this._canvas) {
+      this._canvas.removeEventListener('pointerdown',  this._pdCb);
+      this._canvas.removeEventListener('pointermove',  this._pmCb);
+      this._canvas.removeEventListener('pointerup',    this._puCb);
+      this._canvas.removeEventListener('pointercancel',this._puCb);
+    }
+    if (this._renderer) this._renderer.dispose();
     this._el.remove();
     if (this.onDestroy) this.onDestroy();
   }

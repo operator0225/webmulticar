@@ -292,6 +292,7 @@ function updateHaptics(now) {
 }
 
 let _resetCooldown = 0;
+let _builderOpen = false;
 
 // recover to track: works upside down, off-track, airborne — always
 function recoverToTrack() {
@@ -486,7 +487,7 @@ function loop(now) {
   if (camMode === 0 && TIER.mirror > 0 && frame % TIER.mirror === 0) {
     carVis.renderMirror(renderer, scene, vehicle);
   }
-  post.render();
+  if (!_builderOpen) post.render();
 }
 
 addEventListener('resize', () => {
@@ -532,8 +533,9 @@ function launchMenu() {
       }
     },
     onBuild: () => {
+      _builderOpen = true;
       const builder = new CarBuilder();
-      builder.onDestroy = launchMenu;
+      builder.onDestroy = () => { _builderOpen = false; launchMenu(); };
     },
   });
 }
