@@ -174,6 +174,7 @@ export class CarBuilder {
     this._ray = new THREE.Raycaster();
     this._mouse = new THREE.Vector2();
 
+    this._addCockpitRef();
     this._load();
 
     this._resizeCb = () => this._resize();
@@ -182,6 +183,37 @@ export class CarBuilder {
 
     this._running = true;
     this._animate();
+  }
+
+  // Ghost reference meshes showing where the first-person cockpit elements sit.
+  // builder_y = cockpit_car_y + comH (0.35).  Not selectable — not in _blocks.
+  _addCockpitRef() {
+    this._refMat = new THREE.MeshStandardMaterial({
+      color: 0x88bbff, roughness: 0.9, transparent: true, opacity: 0.22,
+      side: THREE.DoubleSide, depthWrite: false,
+    });
+    this._refMeshes = [];
+    const mat = this._refMat;
+    const Y = 0.35; // comH offset
+    const add = (geo, x, y, z, rx = 0) => {
+      const m = new THREE.Mesh(geo, mat);
+      m.position.set(x, y, z);
+      if (rx) m.rotation.x = rx;
+      m.userData.cockpitRef = true;
+      this._scene.add(m);
+      this._refMeshes.push(m);
+    };
+    // Dashboard block
+    add(new THREE.BoxGeometry(1.72, 0.42, 0.40), 0, 0.37 + Y, -0.94);
+    // Steering wheel ring (tilted like real wheel)
+    const sw = new THREE.Mesh(new THREE.TorusGeometry(0.175, 0.024, 8, 24), mat);
+    sw.position.set(-0.37, 0.45 + Y, -0.70);
+    sw.rotation.x = Math.PI / 2 - 0.42;
+    sw.userData.cockpitRef = true;
+    this._scene.add(sw);
+    this._refMeshes.push(sw);
+    // Driver seat silhouette
+    add(new THREE.BoxGeometry(0.48, 0.72, 0.56), -0.37, 0.28 + Y, 0.38);
   }
 
   // ── mesh helpers ──────────────────────────────────────────────────────────
@@ -712,6 +744,8 @@ export class CarBuilder {
       this._canvas.removeEventListener('pointerup',    this._puCb);
       this._canvas.removeEventListener('pointercancel',this._puCb);
     }
+    for (const m of this._refMeshes || []) { this._scene?.remove(m); m.geometry.dispose(); }
+    if (this._refMat) this._refMat.dispose();
     if (this._renderer) this._renderer.dispose();
     this._el.remove();
     if (this.onDestroy) this.onDestroy();
