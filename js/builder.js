@@ -55,19 +55,22 @@ export class CarBuilder {
     this._el = document.createElement('div');
     this._el.id = 'builder';
     this._el.innerHTML = `
-      <div id="bl-top">
-        <button id="bl-back">&#8592; BACK</button>
-        <span id="bl-title">MAKE YOUR CAR</span>
-        <button id="bl-save">SAVE &amp; DRIVE</button>
-      </div>
-      <div id="bl-hint">Select a material below, then tap the floor to place a block.</div>
-      <div id="bl-viewport"><canvas id="bl-canvas"></canvas></div>
-      <div id="bl-bar">
-        ${MAT_DEFS.map(m => `<button class="bl-mat" data-mat="${m.id}"
-            style="background:#${m.color.toString(16).padStart(6,'0')}">${m.label}</button>`).join('')}
-        <div class="bl-sep"></div>
-        <button class="bl-mat" id="bl-mirror">MIRROR</button>
-        <button class="bl-mat" id="bl-delete">DELETE</button>
+      <canvas id="bl-canvas"></canvas>
+      <div id="bl-ui">
+        <div id="bl-top">
+          <button id="bl-back">&#8592; BACK</button>
+          <span id="bl-title">MAKE YOUR CAR</span>
+          <button id="bl-save">SAVE &amp; DRIVE</button>
+        </div>
+        <div id="bl-hint">Select a material below, then tap the floor to place a block.</div>
+        <div id="bl-gap"></div>
+        <div id="bl-bar">
+          ${MAT_DEFS.map(m => `<button class="bl-mat" data-mat="${m.id}"
+              style="background:#${m.color.toString(16).padStart(6,'0')}">${m.label}</button>`).join('')}
+          <div class="bl-sep"></div>
+          <button class="bl-mat" id="bl-mirror">MIRROR</button>
+          <button class="bl-mat" id="bl-delete">DELETE</button>
+        </div>
       </div>`;
     document.body.appendChild(this._el);
 
@@ -123,20 +126,9 @@ export class CarBuilder {
     this._bindEvents();
     this._load();
 
-    // Observe the wrapper div (regular divs flex-size reliably; canvas replaced-elements don't)
-    this._viewport = this._el.querySelector('#bl-viewport');
-    this._resizeObs = new ResizeObserver(entries => {
-      for (const e of entries) {
-        const w = Math.round(e.contentRect.width);
-        const h = Math.round(e.contentRect.height);
-        if (w > 0 && h > 0) {
-          this._renderer.setSize(w, h, false);
-          this._camera.aspect = w / h;
-          this._camera.updateProjectionMatrix();
-        }
-      }
-    });
-    this._resizeObs.observe(this._viewport);
+    this._resizeCb = () => this._resize();
+    window.addEventListener('resize', this._resizeCb);
+    this._resize();
 
     this._running = true;
     this._animate();
@@ -525,8 +517,7 @@ export class CarBuilder {
   }
 
   _resize() {
-    const w = this._viewport ? this._viewport.clientWidth  : this._canvas.clientWidth;
-    const h = this._viewport ? this._viewport.clientHeight : this._canvas.clientHeight;
+    const w = window.innerWidth, h = window.innerHeight;
     if (!w || !h) return;
     this._renderer.setSize(w, h, false);
     this._camera.aspect = w / h;
@@ -609,7 +600,7 @@ export class CarBuilder {
   destroy() {
     this._running = false;
     clearTimeout(this._longTimer);
-    if (this._resizeObs) this._resizeObs.disconnect();
+    window.removeEventListener('resize', this._resizeCb);
     this._canvas.removeEventListener('pointerdown',  this._pdCb);
     this._canvas.removeEventListener('pointermove',  this._pmCb);
     this._canvas.removeEventListener('pointerup',    this._puCb);
