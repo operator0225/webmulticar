@@ -428,8 +428,8 @@ export class Vehicle {
     const dwy = (tB.y - (wB.z * wB.x * (I.x - I.z))) / I.y;
     const dwz = (tB.z - (wB.x * wB.y * (I.y - I.x))) / I.z;
     wB.x += dwx * dt; wB.y += dwy * dt; wB.z += dwz * dt;
-    // angular damping: damps tumbling and flips
-    wB.multiplyScalar(1 - 0.18 * dt);
+    // angular damping: strongly damps body pitch/roll to kill suspension bounce
+    wB.multiplyScalar(1 - 0.55 * dt);
     // hard cap: the explicit gyroscopic term diverges past ~30 rad/s
     // (crash tumbles) — 25 rad/s = 4 rev/s is already a violent flip
     const wMag = wB.length();
@@ -472,17 +472,19 @@ export class Vehicle {
       this.onTrack = tq.surf !== SURF.GRASS;
 
       // body floor: check CoM + front + rear to prevent terrain clipping on slopes
-      const _bfl = (q2) => {
+      // cap is limited so a crest 1m ahead doesn't catapult the nose upward
+      const _bfl = (q2, cap = 1.0) => {
         if (q2 && this.pos.y < q2.y + 0.26) {
-          this.pos.y = q2.y + 0.26;
+          const snap = Math.min(q2.y + 0.26 - this.pos.y, cap);
+          this.pos.y += snap;
           if (this.vel.y < 0) this.vel.y = 0;
         }
       };
-      _bfl(tq);
-      _bfl(this.track.query(this.pos.x + bodyFwd.x * 2.2, this.pos.z + bodyFwd.z * 2.2,
-           this._bqF || (this._bqF = {})));
-      _bfl(this.track.query(this.pos.x - bodyFwd.x * 2.2, this.pos.z - bodyFwd.z * 2.2,
-           this._bqR || (this._bqR = {})));
+      _bfl(tq, 1.0);
+      _bfl(this.track.query(this.pos.x + bodyFwd.x * 1.0, this.pos.z + bodyFwd.z * 1.0,
+           this._bqF || (this._bqF = {})), 0.3);
+      _bfl(this.track.query(this.pos.x - bodyFwd.x * 1.0, this.pos.z - bodyFwd.z * 1.0,
+           this._bqR || (this._bqR = {})), 0.3);
     }
   }
 

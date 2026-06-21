@@ -8,6 +8,7 @@ import { DEM } from './dem_data.js';
 import { setDem, demHeight } from './terrain.js';
 import { trackMeta } from './tracks/index.js';
 import { showMenu } from './menu.js';
+import { CarBuilder } from './builder.js';
 import { Track, setTrackWidth } from './track.js';
 import { Vehicle, DT, setWeatherGrip } from './physics.js';
 import { buildWorld, groundHeightAt } from './world.js';
@@ -290,9 +291,12 @@ function updateHaptics(now) {
   } catch (e) { /* web fallback may be unavailable */ }
 }
 
+let _resetCooldown = 0;
+
 // recover to track: works upside down, off-track, airborne — always
 function recoverToTrack() {
   vehicle.reset(vehicle.trackS);
+  _resetCooldown = 1.5;
   hud.invalidateLap();
   hud.flash('Reset to track');
 }
@@ -322,7 +326,7 @@ updateCamBtn();
 
 // reverse handling: holding brake at standstill engages reverse
 function autoReverse() {
-  if (!vehicle.auto) return;
+  if (!vehicle.auto || _resetCooldown > 0) return;
   // use raw input values — vehicle.ctrl is remapped when in reverse so can't use it
   if (input.brake > 0.3 && Math.abs(vehicle.speed) < 2.0 && vehicle.gear === 1) {
     vehicle.gear = -1;
@@ -449,6 +453,7 @@ function loop(now) {
   last = now;
   if (dtReal > 0.1) dtReal = 0.1;
 
+  if (_resetCooldown > 0) _resetCooldown -= dtReal;
   if (!paused) {
     input.update(dtReal, vehicle);
     autoReverse();
@@ -510,28 +515,36 @@ function beginDrive() {
   }
 }
 
+function launchMenu() {
+  paused = true;
+  hud.toggleHelp(false);
+  showMenu({
+    trackData: TRACK_DATA, currentTrack: trackId, currentCar: carId,
+    onStart: (selTrack, selCar) => {
+      if (selTrack !== trackId) {
+        localStorage.setItem('ns-track', selTrack);
+        localStorage.setItem('ns-car', selCar);
+        sessionStorage.setItem('ns-go', '1');
+        location.reload();
+      } else {
+        if (selCar !== carId) { localStorage.setItem('ns-car', selCar); setCar(selCar); }
+        beginDrive();
+      }
+    },
+    onBuild: () => {
+      const builder = new CarBuilder();
+      builder.onDestroy = launchMenu;
+    },
+  });
+}
+
 // boot: skip the menu if we just reloaded from a track pick, else show it
 if (sessionStorage.getItem('ns-go')) {
   sessionStorage.removeItem('ns-go');
   hud.flash(tMeta.name);
   beginDrive();
 } else {
-  paused = true;                 // freeze behind the menu
-  hud.toggleHelp(false);
-  showMenu({
-    trackData: TRACK_DATA, currentTrack: trackId, currentCar: carId,
-    onStart: (selTrack, selCar) => {
-      if (selTrack !== trackId) {              // different track -> reload into it
-        localStorage.setItem('ns-track', selTrack);
-        localStorage.setItem('ns-car', selCar);
-        sessionStorage.setItem('ns-go', '1');
-        location.reload();
-      } else {                                  // same track -> start now
-        if (selCar !== carId) { localStorage.setItem('ns-car', selCar); setCar(selCar); }
-        beginDrive();
-      }
-    },
-  });
+  launchMenu();
 }
 
 window.__atmo = atmo;

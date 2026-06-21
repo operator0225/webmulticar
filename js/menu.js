@@ -31,8 +31,8 @@ function drawPreview(cv, points) {
   g.fillStyle = '#ffd24a'; g.beginPath(); g.arc(sx, sz, 4, 0, 7); g.fill();
 }
 
-// trackData: { id -> TRACK }, onStart(trackId, carId)
-export function showMenu({ trackData, currentTrack, currentCar, onStart }) {
+// trackData: { id -> TRACK }, onStart(trackId, carId), onBuild()
+export function showMenu({ trackData, currentTrack, currentCar, onStart, onBuild }) {
   let selTrack = currentTrack, selCar = currentCar;
 
   const ov = document.createElement('div');
@@ -45,6 +45,7 @@ export function showMenu({ trackData, currentTrack, currentCar, onStart }) {
       <div class="menu-sec">CAR</div>
       <div id="menu-cars"></div>
       <button id="menu-start">DRIVE</button>
+      <button id="menu-build">MAKE YOUR CAR</button>
       <div id="menu-links"
          style="margin-top:16px;text-align:center;font-family:'Space Mono',monospace;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;">
         <a href="./data/game_logic.html" target="_blank" rel="noopener"
@@ -95,5 +96,10 @@ export function showMenu({ trackData, currentTrack, currentCar, onStart }) {
   ov.querySelector('#menu-start').addEventListener('click', () => {
     ov.remove();
     onStart(selTrack, selCar);
+  });
+
+  ov.querySelector('#menu-build').addEventListener('click', () => {
+    ov.remove();
+    if (onBuild) onBuild();
   });
 }
