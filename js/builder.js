@@ -81,8 +81,8 @@ export class CarBuilder {
     this._renderer.shadowMap.enabled = true;
 
     this._scene = new THREE.Scene();
-    this._scene.background = new THREE.Color(0x000000);
-    this._scene.fog = new THREE.FogExp2(0x000000, 0.04);
+    this._scene.background = new THREE.Color(0x222222);
+    this._scene.fog = new THREE.FogExp2(0x222222, 0.03);
 
     this._camera = new THREE.PerspectiveCamera(50, 1, 0.05, 80);
     this._updateCam();
@@ -102,7 +102,7 @@ export class CarBuilder {
     // Floor
     const floor = new THREE.Mesh(
       new THREE.PlaneGeometry(16, 16),
-      new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85, metalness: 0 })
+      new THREE.MeshStandardMaterial({ color: 0x666666, roughness: 0.85, metalness: 0 })
     );
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -0.001;
@@ -123,9 +123,20 @@ export class CarBuilder {
     this._bindEvents();
     this._load();
 
-    this._resizeObs = new ResizeObserver(() => this._resize());
+    this._resizeObs = new ResizeObserver(entries => {
+      for (const e of entries) {
+        const w = Math.round(e.contentRect.width);
+        const h = Math.round(e.contentRect.height);
+        if (w > 0 && h > 0) {
+          this._renderer.setSize(w, h, false);
+          this._camera.aspect = w / h;
+          this._camera.updateProjectionMatrix();
+        }
+      }
+    });
     this._resizeObs.observe(cv);
-    this._resize();
+    // rAF fallback for the very first frame when contentRect may not fire yet
+    requestAnimationFrame(() => this._resize());
 
     this._running = true;
     this._animate();
