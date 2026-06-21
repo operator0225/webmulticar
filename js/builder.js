@@ -77,6 +77,7 @@ export class CarBuilder {
     this._orbitTheta  = 0.75;
     this._orbitPhi    = 0.40;
     this._orbitR      = 7.0;
+    this._orbitTarget = new THREE.Vector3(0, 0.6, 0);
     this._pointers    = new Map();   // pointerId → {x,y} for pinch-zoom tracking
     this._pinchDist   = null;
     this._longTimer   = null;
@@ -176,6 +177,7 @@ export class CarBuilder {
 
     this._addCockpitRef();
     this._load();
+    this._recentreCamera();
 
     this._resizeCb = () => this._resize();
     window.addEventListener('resize', this._resizeCb);
@@ -620,12 +622,29 @@ export class CarBuilder {
 
   _updateCam() {
     const r = this._orbitR, phi = this._orbitPhi, theta = this._orbitTheta;
+    const t = this._orbitTarget;
     this._camera.position.set(
-      r * Math.cos(phi) * Math.sin(theta),
-      r * Math.sin(phi),
-      r * Math.cos(phi) * Math.cos(theta)
+      t.x + r * Math.cos(phi) * Math.sin(theta),
+      t.y + r * Math.sin(phi),
+      t.z + r * Math.cos(phi) * Math.cos(theta)
     );
-    this._camera.lookAt(0, 0.6, 0);
+    this._camera.lookAt(t.x, t.y, t.z);
+  }
+
+  // Recentre orbit on the bounding-box midpoint of all current blocks.
+  _recentreCamera() {
+    if (!this._blocks.length) return;
+    let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity, minZ=Infinity, maxZ=-Infinity;
+    for (const b of this._blocks) {
+      const [hx, hy, hz] = [b.size[0]/2, b.size[1]/2, b.size[2]/2];
+      minX = Math.min(minX, b.pos.x-hx); maxX = Math.max(maxX, b.pos.x+hx);
+      minY = Math.min(minY, b.pos.y-hy); maxY = Math.max(maxY, b.pos.y+hy);
+      minZ = Math.min(minZ, b.pos.z-hz); maxZ = Math.max(maxZ, b.pos.z+hz);
+    }
+    this._orbitTarget.set((minX+maxX)/2, (minY+maxY)/2, (minZ+maxZ)/2);
+    const diag = Math.sqrt((maxX-minX)**2 + (maxY-minY)**2 + (maxZ-minZ)**2);
+    this._orbitR = Math.max(3, Math.min(14, diag * 1.4));
+    this._updateCam();
   }
 
   _resize() {
