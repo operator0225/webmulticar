@@ -78,11 +78,13 @@ export class CarBuilder {
     this._orbitPhi    = 0.32;
     this._orbitR      = 6.0;
     this._orbitTarget = new THREE.Vector3(0, 0.35, 0);
-    this._pointers    = new Map();   // pointerId → {x,y}
+    this._pointers    = new Map();
     this._pinchDist   = null;
-    this._panLast     = null;        // midpoint of 2-finger touch for panning
-    this._tapEvent    = null;        // stored pointer-down position for deferred tap
-    this._dragDist    = 0;           // pixels moved since pointer-down (tap vs drag)
+    this._pinchAngle  = null;        // two-finger rotation angle (mode 1 twist)
+    this._panLast     = null;
+    this._tapEvent    = null;
+    this._dragDist    = 0;
+    this._ctrlMode    = 2;           // 1=twist/reverse  2=default  3=swapped
     this._longTimer   = null;
     this._running     = false;
     this.onDestroy    = null;
@@ -100,7 +102,14 @@ export class CarBuilder {
       <div id="bl-ui">
         <div id="bl-top">
           <button id="bl-back">&#8592; BACK</button>
-          <span id="bl-title">MAKE YOUR CAR</span>
+          <div id="bl-title">
+            <div id="bl-title-text">MAKE YOUR CAR</div>
+            <div id="bl-ctrl-mode">
+              <button class="bl-cmode" data-mode="1">↺</button>
+              <button class="bl-cmode active" data-mode="2">⊕</button>
+              <button class="bl-cmode" data-mode="3">⇄</button>
+            </div>
+          </div>
           <button id="bl-save">SAVE &amp; DRIVE</button>
         </div>
         <div id="bl-hint">Select a material below, then tap the floor to place a block.</div>
@@ -415,10 +424,11 @@ export class CarBuilder {
     this._pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
     if (this._pointers.size === 2) {
-      // Two-finger: init pinch + pan, cancel any single-finger state
+      // Two-finger: init pinch + pan + rotation angle, cancel single-finger state
       const pts = [...this._pointers.values()];
-      this._pinchDist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
-      this._panLast = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
+      this._pinchDist  = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+      this._pinchAngle = Math.atan2(pts[1].y - pts[0].y, pts[1].x - pts[0].x);
+      this._panLast    = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
       this._dragHandle  = null;
       this._orbitActive = false;
       this._tapEvent    = null;
@@ -465,17 +475,38 @@ export class CarBuilder {
       this._pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     }
 
-    // Two-finger: pinch zoom + pan simultaneously
+    // Two-finger: pinch zoom + mode-specific gesture
     if (this._pointers.size === 2 && this._pinchDist !== null) {
       const pts = [...this._pointers.values()];
       const newDist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+      // Zoom always
       this._orbitR = Math.max(2.5, Math.min(18, this._orbitR + (this._pinchDist - newDist) * 0.025));
       this._pinchDist = newDist;
       const mx = (pts[0].x + pts[1].x) / 2;
       const my = (pts[0].y + pts[1].y) / 2;
-      if (this._panLast) {
-        this._panOrbit(mx - this._panLast.x, my - this._panLast.y);
+      const ddx = this._panLast ? mx - this._panLast.x : 0;
+      const ddy = this._panLast ? my - this._panLast.y : 0;
+
+      if (this._ctrlMode === 1) {
+        // Pan reversed + twist (2-finger circular rotation → theta)
+        if (this._panLast) this._panOrbit(-ddx, -ddy);
+        const newAngle = Math.atan2(pts[1].y - pts[0].y, pts[1].x - pts[0].x);
+        if (this._pinchAngle !== null) {
+          let dA = newAngle - this._pinchAngle;
+          if (dA >  Math.PI) dA -= 2 * Math.PI;
+          if (dA < -Math.PI) dA += 2 * Math.PI;
+          this._orbitTheta -= dA * 1.6;
+        }
+        this._pinchAngle = newAngle;
+      } else if (this._ctrlMode === 2) {
+        // Normal pan
+        if (this._panLast) this._panOrbit(ddx, ddy);
+      } else {
+        // Mode 3: two-finger midpoint acts as orbit (like single-finger in modes 1&2)
+        this._orbitTheta -= ddx * 0.009;
+        this._orbitPhi = Math.max(0.05, Math.min(1.45, this._orbitPhi + ddy * 0.006));
       }
+
       this._panLast = { x: mx, y: my };
       this._updateCam();
       return;
@@ -533,8 +564,14 @@ export class CarBuilder {
     if (this._orbitActive && this._orbitLast) {
       const dx = e.clientX - this._orbitLast.x;
       const dy = e.clientY - this._orbitLast.y;
-      this._orbitTheta -= dx * 0.009;
-      this._orbitPhi = Math.max(0.05, Math.min(1.45, this._orbitPhi + dy * 0.006));
+      if (this._ctrlMode === 3) {
+        // Mode 3: single finger pans
+        this._panOrbit(dx, dy);
+      } else {
+        // Modes 1 & 2: single finger orbits
+        this._orbitTheta -= dx * 0.009;
+        this._orbitPhi = Math.max(0.05, Math.min(1.45, this._orbitPhi + dy * 0.006));
+      }
       this._orbitLast = { x: e.clientX, y: e.clientY };
       this._updateCam();
     }
@@ -666,6 +703,14 @@ export class CarBuilder {
       this._el.querySelectorAll('.bl-mat[data-mat]').forEach(b => b.classList.remove('active'));
       this._hint(on ? 'Tap a block to delete it.' : 'Select a material to place.');
     });
+
+    for (const btn of this._el.querySelectorAll('.bl-cmode')) {
+      btn.addEventListener('click', () => {
+        this._ctrlMode = +btn.dataset.mode;
+        this._el.querySelectorAll('.bl-cmode').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    }
 
     this._el.querySelector('#bl-back').addEventListener('click', () => this.destroy());
     this._el.querySelector('#bl-save').addEventListener('click', () => this._save());
