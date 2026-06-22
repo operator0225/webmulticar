@@ -190,8 +190,15 @@
     border: 1px solid rgba(255,255,255,0.22); border-radius: 8px; padding: 7px 13px;
     font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap; }
   #bl-back:active { background: rgba(255,255,255,0.20); }
-  #bl-title { flex: 1; text-align: center; color: #ffd24a; font-size: 14px;
-    font-weight: 800; letter-spacing: 2px; }
+  #bl-title { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  #bl-title-text { color: #ffd24a; font-size: 14px; font-weight: 800; letter-spacing: 2px; }
+  #bl-ctrl-mode { display: flex; gap: 5px; }
+  .bl-cmode { width: 22px; height: 14px; border-radius: 4px; font-size: 9px; font-weight: 700;
+    border: 1px solid rgba(255,255,255,0.22); background: rgba(255,255,255,0.07);
+    color: rgba(255,255,255,0.45); cursor: pointer; font-family: inherit; padding: 0;
+    display: flex; align-items: center; justify-content: center; touch-action: manipulation; }
+  .bl-cmode.active { border-color: #ffd24a; color: #ffd24a; background: rgba(255,212,74,0.13); }
+  .bl-cmode:active { filter: brightness(1.5); }
   #bl-save { background: rgba(40,130,70,0.55); color: #7ce8a4;
     border: 1px solid rgba(100,240,140,0.4); border-radius: 8px; padding: 7px 12px;
     font-size: 12px; font-weight: 800; cursor: pointer; font-family: inherit;
@@ -280,7 +287,7 @@
 <!-- Cloudflare Web Analytics -->
 <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "5f92ae19fb414d8e985699513444fda5"}'></script>
 <!-- End Cloudflare Web Analytics -->
-  <script type="module" crossorigin src="./assets/main-Bo6xj23J.js"></script>
+  <script type="module" crossorigin src="./assets/main-C9iPSvyz.js"></script>
 </head>
 <body>
 <div id="app"></div>
